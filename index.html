@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAFIZ BEVERAGES — Operations Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#151F28;
+    --ink-soft:#5B6B76;
+    --paper:#EFF1EA;
+    --panel:#FFFFFF;
+    --line:#E2E4DC;
+    --red:#AD1F2C;
+    --red-deep:#7E1620;
+    --green:#2E6B4F;
+    --green-soft:#E4EFE9;
+    --gold:#AD7A25;
+    --gold-soft:#F5EBD8;
+    --blue:#2E5C8A;
+    --blue-soft:#E3EBF3;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --display: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; font-family:var(--font); background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; font-size:14px; }
+  .shell{ display:flex; min-height:100vh; }
+
+  .sidebar{ width:246px; flex-shrink:0; background:linear-gradient(175deg,#151F28 0%,#0D151C 100%); color:#EDEFEC; display:flex; flex-direction:column; padding:26px 0; position:sticky; top:0; height:100vh; box-shadow:2px 0 20px rgba(0,0,0,0.15); }
+  .brand{ padding:0 22px 20px 22px; border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+  .brand-mark{ width:36px; height:36px; border-radius:9px; background:linear-gradient(135deg,var(--red),#7E1620); display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:700; font-size:15px; flex-shrink:0; box-shadow:0 3px 10px rgba(173,31,44,0.35); }
+  .brand .name{ font-family:var(--display); font-size:16px; font-weight:700; line-height:1.2; letter-spacing:0.2px; }
+  .brand .sub{ font-size:10.8px; color:#8E9BA4; margin-top:2px; text-transform:uppercase; letter-spacing:0.5px; }
+  .nav-scroll{ overflow-y:auto; flex:1; }
+  .nav-item{ display:flex; align-items:center; gap:12px; padding:11px 22px; font-size:13.2px; color:#AEB9C0; cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+  .nav-item svg{ width:16px; height:16px; opacity:.75; flex-shrink:0; }
+  .nav-item:hover{ background:rgba(255,255,255,0.04); color:#fff; }
+  .nav-item.active{ background:rgba(173,31,44,0.22); color:#fff; border-left-color:var(--red); font-weight:600; }
+  .nav-item.active svg{ opacity:1; }
+  .sidebar-foot{ margin-top:8px; padding:16px 22px 0 22px; font-size:10.6px; color:#66747D; border-top:1px solid rgba(255,255,255,0.1); line-height:1.6; display:flex; align-items:center; gap:6px; }
+  .dot-status{ width:7px; height:7px; border-radius:50%; background:#4CAF7D; flex-shrink:0; box-shadow:0 0 6px #4CAF7D; }
+  .dot-status.bad{ background:#D9534F; box-shadow:0 0 6px #D9534F; }
+
+  .main{ flex:1; padding:32px 42px 60px 42px; max-width:1320px; overflow-x:auto; }
+  .page-head{ margin-bottom:24px; display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .page-head h1{ font-family:var(--display); font-size:28px; margin:0 0 6px 0; font-weight:700; letter-spacing:-0.2px; }
+  .page-head p{ margin:0; color:var(--ink-soft); font-size:13.5px; max-width:560px; }
+  .eyebrow{ text-transform:uppercase; letter-spacing:1.2px; font-size:10.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; }
+
+  .subtabs{ display:flex; gap:5px; margin-bottom:24px; flex-wrap:wrap; background:#E5E6DF; padding:5px; border-radius:10px; }
+  .subtab{ padding:8px 14px; font-size:12.4px; font-weight:600; color:var(--ink-soft); cursor:pointer; border-radius:7px; transition:all .15s; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+  .subtab .dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .subtab:hover{ color:var(--ink); }
+  .subtab.active{ color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.18); }
+  .subpanel{ display:none; }
+  .subpanel.active{ display:block; }
+
+  .stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:26px; }
+  .stat{ background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--ink); padding:16px 18px; min-width:158px; flex:1; transition:all .15s; }
+  .stat:hover{ box-shadow:0 6px 18px rgba(21,31,40,0.09); transform:translateY(-1px); }
+  .stat .label{ font-size:10.6px; color:var(--ink-soft); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px; }
+  .stat .value{ font-family:var(--display); font-size:24px; font-weight:700; line-height:1; }
+  .stat .sub{ font-size:11px; color:var(--ink-soft); margin-top:6px; }
+  .stat.c-red{ border-top-color:var(--red); }
+  .stat.c-green{ border-top-color:var(--green); }
+  .stat.c-gold{ border-top-color:var(--gold); }
+  .stat.c-blue{ border-top-color:var(--blue); }
+
+  .grid-2{ display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+  @media (max-width:1000px){ .grid-2, .grid-4{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--line); margin-bottom:20px; transition:box-shadow .15s; }
+  .panel:hover{ box-shadow:0 4px 20px rgba(21,31,40,0.06); }
+  .panel.accent{ border-left:4px solid var(--accent, var(--ink)); }
+  .panel-head{ padding:15px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .panel-head h2{ font-size:14px; margin:0; font-weight:700; }
+  .panel-head .hint{ font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.4px; }
+  .panel-body{ padding:20px; }
+  .chart-box{ position:relative; height:250px; }
+  .chart-box.small{ height:180px; }
+
+  .form-wrap{ max-width:820px; }
+  .form-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:16px; }
+  .field label{ display:block; font-size:11px; color:var(--ink-soft); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+  .field input, .field select{ width:100%; padding:9px 11px; border:1px solid var(--line); font-size:13.5px; background:#FCFCFB; font-family:var(--font); color:var(--ink); border-radius:4px; transition:border-color .15s; }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--accent,var(--red)); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent,var(--red)) 15%, transparent); background:#fff; }
+  .form-actions{ margin-top:18px; display:flex; align-items:center; gap:14px; }
+  button.primary{ background:var(--accent,var(--red)); color:#fff; border:none; padding:11px 24px; font-size:13.5px; font-weight:600; cursor:pointer; border-radius:4px; transition:filter .15s, transform .1s; }
+  button.primary:hover{ filter:brightness(0.88); }
+  button.primary:active{ transform:scale(0.98); }
+  .form-msg{ font-size:12.5px; font-weight:600; }
+  .form-msg.ok{ color:var(--green); }
+  .form-msg.err{ color:var(--red); }
+
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  thead th{ text-align:left; padding:10px 12px; background:#F2F3ED; color:var(--ink-soft); font-weight:700; border-bottom:1px solid var(--line); white-space:nowrap; text-transform:uppercase; font-size:10.6px; letter-spacing:0.4px; }
+  tbody td{ padding:9px 12px; border-bottom:1px solid #EDEEE8; white-space:nowrap; }
+  tbody tr:hover{ background:#FAFAF7; }
+  .num{ text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12px; }
+  .profit-pos{ color:var(--green); font-weight:700; }
+  .profit-neg{ color:var(--red); font-weight:700; }
+  .empty-state{ padding:40px 20px; text-align:center; color:var(--ink-soft); font-size:13px; }
+  .table-scroll{ overflow-x:auto; max-height:480px; overflow-y:auto; }
+  .del-btn{ background:none; border:none; color:var(--red); cursor:pointer; font-size:11.5px; font-weight:600; }
+  .del-btn:hover{ text-decoration:underline; }
+  tfoot td{ padding:11px 12px; font-weight:700; border-top:2px solid var(--ink); background:#F7F7F4; position:sticky; bottom:0; }
+
+  .coming{ padding:50px 30px; text-align:center; border:1px dashed var(--line); background:var(--panel); }
+  .coming .tag{ display:inline-block; background:var(--gold-soft); color:var(--gold); font-size:11px; font-weight:700; padding:4px 10px; margin-bottom:12px; border-radius:3px; }
+  .coming p{ color:var(--ink-soft); font-size:13.5px; max-width:460px; margin:8px auto 0 auto; }
+
+  .tab-section{ display:none; }
+  .tab-section.active{ display:block; }
+
+  .badge{ display:inline-block; font-size:10.2px; font-weight:700; padding:3px 9px; border-radius:3px; text-transform:uppercase; letter-spacing:0.3px; }
+  .badge.live{ background:var(--green-soft); color:var(--green); }
+  .badge.pending{ background:#EEE; color:var(--ink-soft); }
+
+  .cat-swatch{ display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; }
+  .cat-swatch .sw{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+  .matrix-scroll{ overflow-x:auto; }
+  .matrix-scroll table{ font-size:11.6px; }
+  .matrix-scroll th:first-child, .matrix-scroll td:first-child{ position:sticky; left:0; background:#F2F3ED; z-index:1; }
+  .matrix-scroll tbody td:first-child{ background:#fff; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">HB</div>
+      <div>
+        <div class="name">Hafiz Beverages</div>
+        <div class="sub">RYK · Sadiqabad Ops</div>
+      </div>
+    </div>
+    <div class="nav-scroll">
+      <div class="nav-item active" data-tab="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Overview
+      </div>
+      <div class="nav-item" data-tab="sales">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        Sale Report
+      </div>
+      <div class="nav-item" data-tab="expense">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/></svg>
+        Expense &amp; Cash Flow
+      </div>
+      <div class="nav-item" data-tab="purchasing">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        Purchasing
+      </div>
+      <div class="nav-item" data-tab="cashdetail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="7" cy="15" r="1"/></svg>
+        Salesman Cash Detail
+      </div>
+    </div>
+    <div class="sidebar-foot"><span class="dot-status" id="storage-dot"></span><span id="storage-label">Checking storage…</span></div>
+  </div>
+
+  <div class="main">
+
+    <section class="tab-section active" id="tab-overview">
+      <div class="page-head"><div><div class="eyebrow">Live dashboard</div><h1>Overview</h1><p>Combined performance across all record sources — figures fill in as each section is built and used.</p></div></div>
+      <div class="stat-row" id="overview-stats"></div>
+      <div class="grid-2">
+        <div class="panel accent" style="--accent:#AD1F2C"><div class="panel-head"><h2>Sales trend — daily</h2><span class="hint">Sale vs profit</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-ov-daily"></canvas></div></div></div>
+        <div class="panel accent" style="--accent:#AD1F2C"><div class="panel-head"><h2>Product mix</h2><span class="hint">Share of sale amount</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-ov-mix"></canvas></div></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel accent" style="--accent:#2E5C8A"><div class="panel-head"><h2>Expense trend — daily</h2><span class="hint">Total expense per day</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-ov-expdaily"></canvas></div></div></div>
+        <div class="panel accent" style="--accent:#2E5C8A"><div class="panel-head"><h2>Expense by category</h2><span class="hint">Share of total expense</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-ov-expmix"></canvas></div></div></div>
+      </div>
+      <div class="grid-4">
+        <div class="panel"><div class="panel-head"><h2>Weekly income</h2></div><div class="panel-body"><div class="chart-box small"><canvas id="chart-ov-weekly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-head"><h2>Monthly income</h2></div><div class="panel-body"><div class="chart-box small"><canvas id="chart-ov-monthly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-head"><h2>Yearly income</h2></div><div class="panel-body"><div class="chart-box small"><canvas id="chart-ov-yearly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-head"><h2>Purchase</h2></div><div class="panel-body"><div class="empty-state" style="padding:16px 6px;">Feeds in once Purchasing is built (next step).</div></div></div>
+      </div>
+      <div class="panel"><div class="panel-head"><h2>Build status</h2><span class="hint">Step-by-step rollout</span></div>
+        <div class="panel-body"><table><thead><tr><th>Section</th><th>Status</th><th>Records so far</th></tr></thead><tbody id="status-table"></tbody></table></div>
+      </div>
+    </section>
+
+    <section class="tab-section" id="tab-sales">
+      <div class="page-head"><div><div class="eyebrow">Module 1 of 4</div><h1>Sale Report</h1><p>Daily customer-wise sales. Margin, cost and profit calculate automatically from the product rate list.</p></div></div>
+
+      <div class="subtabs" id="sales-subtabs">
+        <div class="subtab active" data-sub="entryform" style="background:#AD1F2C;">Entry Form</div>
+        <div class="subtab" data-sub="entries">Sales Entries</div>
+        <div class="subtab" data-sub="daily">Daily</div>
+        <div class="subtab" data-sub="weekly">Weekly</div>
+        <div class="subtab" data-sub="monthly">Monthly</div>
+        <div class="subtab" data-sub="yearly">Yearly</div>
+      </div>
+
+      <div class="subpanel active" id="sub-entryform">
+        <div class="panel form-wrap accent" style="--accent:#AD1F2C">
+          <div class="panel-head"><h2>New Sale Entry</h2><span class="hint">Manual fields only</span></div>
+          <div class="panel-body">
+            <form id="sales-form">
+              <div class="form-grid">
+                <div class="field"><label>Date</label><input type="date" id="s-date" required></div>
+                <div class="field"><label>Route / Vehicle</label><input type="text" id="s-route" placeholder="e.g. HB-08"></div>
+                <div class="field"><label>Delivery Man</label><input type="text" id="s-delman" placeholder="e.g. Asghar Ali"></div>
+                <div class="field"><label>Invoice / Doc #</label><input type="text" id="s-invoice"></div>
+                <div class="field"><label>Customer Name</label><input type="text" id="s-customer" required></div>
+                <div class="field"><label>Product</label>
+                  <select id="s-product" required>
+                    <option value="">Select</option>
+                    <option>Coke</option><option>Sprite</option><option>Fanta</option>
+                    <option>Dasani water</option><option>Predator Peach</option>
+                    <option>Mixed</option><option>Tax/Pass-through</option>
+                  </select>
+                </div>
+                <div class="field"><label>Size</label><input type="text" id="s-size" placeholder="e.g. 1500ml Lemon"></div>
+                <div class="field"><label>Quantity</label><input type="number" step="any" id="s-qty" required></div>
+                <div class="field"><label>Sale Amount (Rs)</label><input type="number" step="any" id="s-amount" required></div>
+                <div class="field"><label>Notes</label><input type="text" id="s-notes"></div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="primary" style="--accent:#AD1F2C">Save Entry</button>
+                <span class="form-msg" id="sales-msg"></span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpanel" id="sub-entries">
+        <div class="panel">
+          <div class="panel-head"><h2>All Sales Entries</h2><span class="hint" id="sales-count">0 entries</span></div>
+          <div class="panel-body table-scroll">
+            <table>
+              <thead><tr>
+                <th>Date</th><th>Route</th><th>Delivery Man</th><th>Invoice#</th><th>Customer</th>
+                <th>Product</th><th>Size</th><th class="num">Qty</th><th class="num">Sale (Rs)</th>
+                <th class="num">Margin %</th><th class="num">Cost (Rs)</th><th class="num">Profit (Rs)</th><th>Notes</th><th></th>
+              </tr></thead>
+              <tbody id="sales-rows"></tbody>
+              <tfoot><tr>
+                <td colspan="7">TOTAL</td>
+                <td class="num" id="tot-amount">0</td><td></td><td class="num" id="tot-cost">0</td>
+                <td class="num" id="tot-profit">0</td><td colspan="2"></td>
+              </tr></tfoot>
+            </table>
+            <div class="empty-state" id="sales-empty" style="display:none;">No entries yet — add the first sale from the Entry Form tab.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpanel" id="sub-daily">
+        <div class="panel"><div class="panel-head"><h2>Daily Summary</h2><span class="hint">Auto-grouped by date</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-daily"></canvas></div></div></div>
+        <div class="panel"><div class="panel-body table-scroll">
+          <table><thead><tr><th>Date</th><th class="num">Total Qty</th><th class="num">Total Sales (Rs)</th><th class="num">Total Cost (Rs)</th><th class="num">Total Profit (Rs)</th><th class="num">Profit %</th></tr></thead>
+          <tbody id="daily-rows"></tbody></table>
+          <div class="empty-state" id="daily-empty" style="display:none;">No data yet.</div>
+        </div></div>
+      </div>
+
+      <div class="subpanel" id="sub-weekly">
+        <div class="panel"><div class="panel-head"><h2>Weekly Summary</h2><span class="hint">Monday–Sunday</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-weekly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-body table-scroll">
+          <table><thead><tr><th>Week Start</th><th>Week End</th><th class="num">Total Qty</th><th class="num">Total Sales (Rs)</th><th class="num">Total Cost (Rs)</th><th class="num">Total Profit (Rs)</th><th class="num">Profit %</th></tr></thead>
+          <tbody id="weekly-rows"></tbody></table>
+          <div class="empty-state" id="weekly-empty" style="display:none;">No data yet.</div>
+        </div></div>
+      </div>
+
+      <div class="subpanel" id="sub-monthly">
+        <div class="panel"><div class="panel-head"><h2>Monthly Summary</h2><span class="hint">Calendar month</span></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-monthly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-body table-scroll">
+          <table><thead><tr><th>Month</th><th class="num">Total Qty</th><th class="num">Total Sales (Rs)</th><th class="num">Total Cost (Rs)</th><th class="num">Total Profit (Rs)</th><th class="num">Profit %</th></tr></thead>
+          <tbody id="monthly-rows"></tbody></table>
+          <div class="empty-state" id="monthly-empty" style="display:none;">No data yet.</div>
+        </div></div>
+      </div>
+
+      <div class="subpanel" id="sub-yearly">
+        <div class="panel"><div class="panel-head"><h2>Yearly Summary</h2></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-yearly"></canvas></div></div></div>
+        <div class="panel"><div class="panel-body table-scroll">
+          <table><thead><tr><th>Year</th><th class="num">Total Qty</th><th class="num">Total Sales (Rs)</th><th class="num">Total Cost (Rs)</th><th class="num">Total Profit (Rs)</th><th class="num">Profit %</th></tr></thead>
+          <tbody id="yearly-rows"></tbody></table>
+          <div class="empty-state" id="yearly-empty" style="display:none;">No data yet.</div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="tab-section" id="tab-expense">
+      <div class="page-head"><div><div class="eyebrow">Module 2 of 4</div><h1>Expense &amp; Cash Flow</h1><p>Each category is logged separately — exactly like your original workbook — with an Overall Summary tying them together.</p></div></div>
+      <div class="subtabs" id="expense-subtabs"></div>
+      <div id="expense-panels"></div>
+    </section>
+
+    <section class="tab-section" id="tab-purchasing">
+      <div class="page-head"><div><div class="eyebrow">Module 3 of 4 · Most important sheet</div><h1>Purchasing</h1><p>Product purchases and stock movement — every formula (margin, discount, tax, pallet, MT rate) replicated exactly from your workbook.</p></div></div>
+      <div class="subtabs" id="purchasing-subtabs">
+        <div class="subtab active" data-sub="entryform" style="background:#AD1F2C;">Purchase Entry</div>
+        <div class="subtab" data-sub="entries">Purchase Records</div>
+        <div class="subtab" data-sub="stockentry">Stock Entry</div>
+        <div class="subtab" data-sub="stock">Stock Monitoring</div>
+        <div class="subtab" data-sub="overall">Overall Summary</div>
+      </div>
+      <div id="purchasing-panels"></div>
+    </section>
+
+    <section class="tab-section" id="tab-cashdetail">
+      <div class="page-head"><div><h1>Salesman Cash Detail</h1><p>Daily salesman-wise cash detail — vouchers, credit recovery, Cash/UBL/JazCash collection.</p></div></div>
+      <div class="coming"><div class="tag">COMING</div>
+        <p>Har salesman ki daily cash detail entry (Voucher Amount, Credit Recovery, Cash/UBL/JazCash) aur uska Daily/Monthly summary yahan aayega.</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ============ CONFIG / SEED DATA ============ */
+const SALES_KEY = 'sales-entries';
+const RATES = {
+  'Coke|250ml': 0.104, 'Coke|1000ml': 0.052, 'Coke|1500ml': 0.0513, 'Coke|2000ml': 0.0508, 'Coke|350ml': 0.0567,
+  'Sprite|250ml': 0.104, 'Sprite|1000ml': 0.052, 'Sprite|1500ml Lemon': 0.0513, 'Sprite|1500ml Mint': 0.0513,
+  'Sprite|250ml Can': 0.0552, 'Sprite|2000ml': 0.0508, 'Sprite|350ml Lemon': 0.0567,
+  'Fanta|250ml': 0.104, 'Fanta|350ml': 0.0567, 'Fanta|1000ml': 0.052,
+  'Dasani water|1500ml': 0.0521,
+  'Mixed|': 0.063, 'Tax/Pass-through|': 0,
+};
+const DEFAULT_MARGIN = 0.063;
+const SALES_SEED = [{"date": "2026-07-20", "route": "CAZ-3718", "delman": "Khalid Mahmood", "invoice": "TA", "customer": "Sultan Kiryana", "product": "Sprite", "size": "", "qty": 1, "amount": 783.92, "marginPct": 0.063, "cost": 734.53, "profit": 49.39, "notes": ""}, {"date": "2026-07-20", "route": "CAZ-3718", "delman": "Khalid Mahmood", "invoice": "TA", "customer": "Rana Imdad Kryana Store", "product": "Mixed", "size": "", "qty": 2, "amount": 1537.71, "marginPct": 0.063, "cost": 1440.83, "profit": 96.88, "notes": ""}, {"date": "2026-07-20", "route": "CAZ-3718", "delman": "Khalid Mahmood", "invoice": "TA", "customer": "Rana Imdad Kryana Store - RETURN", "product": "Mixed", "size": "", "qty": -2, "amount": -1537.71, "marginPct": 0.063, "cost": -1440.83, "profit": -96.88, "notes": "Return/cancellation per handwritten adjustment on invoice listing"}, {"date": "2026-07-20", "route": "CAZ-3718", "delman": "Khalid Mahmood", "invoice": "TA", "customer": "Abdullah Kiryana Store", "product": "Mixed", "size": "", "qty": 5, "amount": 5399.65, "marginPct": 0.063, "cost": 5059.47, "profit": 340.18, "notes": ""}, {"date": "2026-07-20", "route": "CAZ-3718", "delman": "Khalid Mahmood", "invoice": "TA", "customer": "Other shops on route (~42 customers)", "product": "Mixed", "size": "", "qty": 243, "amount": 218533.42, "marginPct": 0.063, "cost": 204765.81, "profit": 13767.61, "notes": "Aggregate of remaining route - see original Invoice Listing (Doc# TA) for shop-wise split"}, {"date": "2026-07-20", "route": "CAX-6070", "delman": "Munawer", "invoice": "T3", "customer": "Full route (34 customers)", "product": "Mixed", "size": "", "qty": 260, "amount": 232374.94, "marginPct": 0.063, "cost": 217735.32, "profit": 14639.62, "notes": "Aggregate - see original Invoice Listing (Doc# T3) for shop-wise split"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Coke", "size": "2000ml", "qty": 6, "amount": 6780.66, "marginPct": 0.0508, "cost": 6436.2, "profit": 344.46, "notes": ""}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Coke", "size": "1500ml", "qty": 2, "amount": 2060.1, "marginPct": 0.0513, "cost": 1954.42, "profit": 105.68, "notes": ""}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Sprite", "size": "1500ml Lemon", "qty": 2, "amount": 2060.1, "marginPct": 0.0513, "cost": 1954.42, "profit": 105.68, "notes": ""}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Coke", "size": "1000ml", "qty": 2, "amount": 1500.04, "marginPct": 0.052, "cost": 1422.04, "profit": 78.0, "notes": "Net of 0.45% discount"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Fanta", "size": "1000ml", "qty": 1, "amount": 750.02, "marginPct": 0.052, "cost": 711.02, "profit": 39.0, "notes": "Net of 0.45% discount"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Coke", "size": "350ml", "qty": 1, "amount": 780.0, "marginPct": 0.0567, "cost": 735.77, "profit": 44.23, "notes": "Net of 0.52% discount"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Sprite", "size": "350ml Lemon", "qty": 1, "amount": 780.0, "marginPct": 0.0567, "cost": 735.77, "profit": 44.23, "notes": "Sprite Mint - net of 0.52% discount"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Fanta", "size": "350ml", "qty": 1, "amount": 780.0, "marginPct": 0.0567, "cost": 735.77, "profit": 44.23, "notes": "Net of 0.52% discount"}, {"date": "2026-07-21", "route": "HB-08", "delman": "Asghar Ali", "invoice": "E80090563", "customer": "Yasin Kiryana Store", "product": "Tax/Pass-through", "size": "", "qty": 0, "amount": 387.83, "marginPct": 0, "cost": 387.83, "profit": 0, "notes": "Advance Tax collected on this invoice"}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Coke", "size": "2000ml", "qty": 1, "amount": 1130.11, "marginPct": 0.0508, "cost": 1072.7, "profit": 57.41, "notes": ""}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Sprite", "size": "2000ml", "qty": 1, "amount": 1130.11, "marginPct": 0.0508, "cost": 1072.7, "profit": 57.41, "notes": ""}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Coke", "size": "1000ml", "qty": 1, "amount": 750.02, "marginPct": 0.052, "cost": 711.02, "profit": 39.0, "notes": "Net of 0.45% discount"}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Fanta", "size": "350ml", "qty": 1, "amount": 780.0, "marginPct": 0.0567, "cost": 735.77, "profit": 44.23, "notes": "Net of 0.52% discount"}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Sprite", "size": "1500ml Lemon", "qty": 1, "amount": 1030.05, "marginPct": 0.0513, "cost": 977.21, "profit": 52.84, "notes": ""}, {"date": "2026-07-21", "route": "CAK-635", "delman": "Asghar Ali", "invoice": "E80090582", "customer": "Mashallah Sardar Kirya", "product": "Tax/Pass-through", "size": "", "qty": 0, "amount": 120.69, "marginPct": 0, "cost": 120.69, "profit": 0, "notes": "Advance Tax collected on this invoice"}];
+const CATEGORY_CONFIGS = [{"key": "vehicle", "label": "Vehicle Maintenance", "color": "#AD1F2C", "fields": [{"id": "vehicleNo", "label": "Vehicle No", "type": "text"}, {"id": "item", "label": "Item Details", "type": "text"}, {"id": "receiver", "label": "Receiver's Name", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-01", "vehicleNo": 5776.0, "item": "Challan HighWay", "amount": 500.0, "receiver": "Ali Asgher"}, {"date": "2026-07-01", "vehicleNo": "Patrol Lifter", "item": "Gear & Hydrolic Oil Change", "amount": 20000.0, "receiver": "Waqas"}, {"date": "2026-07-01", "vehicleNo": "Patrol Lifter", "item": "Labour Chages Kanwer Vandor", "amount": 1000.0, "receiver": "Waqas"}, {"date": "2026-07-02", "vehicleNo": "CBK-6864", "item": "Full service", "amount": 800.0, "receiver": "waqas"}, {"date": "2026-07-02", "vehicleNo": "petrol lifter", "item": "head kharad + mazdoori", "amount": 6550.0, "receiver": "Waqas"}, {"date": "2026-07-02", "vehicleNo": "CAX-2773", "item": "tyre punture", "amount": 450.0, "receiver": "waqas"}, {"date": "2026-07-02", "vehicleNo": 1471.0, "item": "Excel Seal,Bairing Cone Seal,Labouring", "amount": 3500.0, "receiver": "Waqas"}, {"date": "2026-07-04", "vehicleNo": 635.0, "item": "full wash Service & Deisel", "amount": 700.0, "receiver": "Waqas"}, {"date": "2026-07-04", "vehicleNo": 635.0, "item": "Doors Lock , Pin Lock 8 Pins for Door", "amount": 2800.0, "receiver": "Waqas"}, {"date": "2026-07-04", "vehicleNo": "CY-1471", "item": "full car wash + Diesel for car service", "amount": 700.0, "receiver": "waqas"}, {"date": "2026-07-04", "vehicleNo": "RNS-1501", "item": "MRF tyre one piece new with labour charges", "amount": 43000.0, "receiver": "waqas"}, {"date": "2026-07-05", "vehicleNo": 635.0, "item": "Door lock , labour charges", "amount": 3900.0, "receiver": "waqas"}, {"date": "2026-07-05", "vehicleNo": "lifter diesel", "item": "LPG lifter for jen toyota & mechanic", "amount": 3000.0, "receiver": "waqas"}, {"date": "2026-07-05", "vehicleNo": "CAX-6070", "item": "full service", "amount": 600.0, "receiver": "waqas"}, {"date": "2026-07-06", "vehicleNo": "lifter diesel", "item": "1  radiator , meter coolaent", "amount": 42250.0, "receiver": "waqas"}, {"date": "2026-07-06", "vehicleNo": "CAX-2773 +CAK-635", "item": "Backwheel cutting & welding , bumper welding", "amount": 8250.0, "receiver": "waqas"}, {"date": "2026-07-06", "vehicleNo": 3178.0, "item": "Full service", "amount": 800.0, "receiver": "waqas"}, {"date": "2026-07-06", "vehicleNo": "RNS-1501", "item": "2 tyres +labour + 10 stud + Air clinder", "amount": 62700.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": "Generator", "item": "LPG Gas Cylender Refill 2 Cylender 12 Kg & 1 Cylender 45 Kg", "amount": 23110.0, "receiver": "Fahad"}, {"date": "2026-07-07", "vehicleNo": 7040.0, "item": "service Fuill Wash", "amount": 800.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 5776.0, "item": "service Fuill Wash", "amount": 800.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 3723.0, "item": "service Fuill Wash", "amount": 800.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 7956.0, "item": "service Fuill Wash", "amount": 900.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 6805.0, "item": "service Fuill Wash", "amount": 900.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 2773.0, "item": "service Fuill Wash", "amount": 600.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": 6683.0, "item": "service Fuill Wash", "amount": 600.0, "receiver": "waqas"}, {"date": "2026-07-07", "vehicleNo": "Generator", "item": "Generator KV Checking Fees", "amount": 500.0, "receiver": "fahad"}, {"date": "2026-07-09", "vehicleNo": 2092.0, "item": "service Fuill Wash", "amount": 750.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": "Generator", "item": "Battery Change Charges & Terminals", "amount": 1300.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 4556.0, "item": "Riksha oil", "amount": 800.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": "ADC-6255", "item": "Engine Oil", "amount": 650.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 635.0, "item": "tyre punture", "amount": 250.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 635.0, "item": "fan purchase for driver wire", "amount": 1110.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 7956.0, "item": "Puncture", "amount": 300.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 1501.0, "item": "Puncture, puf tube inside", "amount": 350.0, "receiver": ""}, {"date": "2026-07-09", "vehicleNo": 6255.0, "item": "bike front ligh button and module", "amount": 1350.0, "receiver": "waqas"}, {"date": "2026-07-09", "vehicleNo": "Lifter", "item": "clip pressure pice", "amount": 2240.0, "receiver": "waqas"}, {"date": "2026-07-11", "vehicleNo": 635.0, "item": "shak spring, bush, break oil,", "amount": 2000.0, "receiver": "Waqas"}, {"date": "2026-07-11", "vehicleNo": 1471.0, "item": "Engine oil, oil filter, air filter", "amount": 5280.0, "receiver": "Waqas"}, {"date": "2026-07-11", "vehicleNo": 6273.0, "item": "Oil 4-Ltr, Air filter, Oil filter,", "amount": 7220.0, "receiver": "Waqas"}, {"date": "2026-07-12", "vehicleNo": "All Vehcile", "item": "Grees for shake and wheel", "amount": 500.0, "receiver": "Waqas"}, {"date": "2026-07-12", "vehicleNo": "Lifter", "item": "break front jangla, avlo gear, water body", "amount": 17950.0, "receiver": "Waqas"}, {"date": "2026-07-12", "vehicleNo": "Lifter", "item": "water body, pump tanka, service, genrator labor", "amount": 13500.0, "receiver": "Waqas"}, {"date": "2026-07-12", "vehicleNo": "Lifter", "item": "lifter labouring to mr kanwar Alpha Enterprises", "amount": 2000.0, "receiver": "Waqas"}, {"date": "2026-07-13", "vehicleNo": 6273.0, "item": "New key for vehcile", "amount": 400.0, "receiver": "waqas"}, {"date": "2026-07-14", "vehicleNo": 4556.0, "item": "Rikshaw Repair", "amount": 3410.0, "receiver": "waqas"}, {"date": "2026-07-14", "vehicleNo": 1471.0, "item": "tyre punture", "amount": 200.0, "receiver": ""}, {"date": "2026-07-15", "vehicleNo": "Generator", "item": "Armature R&M 2 times Fitting", "amount": 1000.0, "receiver": "Fahad"}, {"date": "2026-07-20", "vehicleNo": "CAA-6273", "item": "Sulf Work Carbons Bush,Bairing Labouring", "amount": 2150.0, "receiver": "Gull Bahar"}, {"date": "2026-07-26", "vehicleNo": "CAX-5776", "item": "Oil Filter, Deisel Filter", "amount": 1950.0, "receiver": "Waqas"}, {"date": "2026-07-26", "vehicleNo": "CAX-7040", "item": "Oil Filter, Deisel Filter", "amount": 1950.0, "receiver": "Waqas"}, {"date": "2026-07-26", "vehicleNo": "CAX-7040", "item": "Wheel Fitting Labouring", "amount": 1000.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "CY-1471", "item": "Wheel Excel,Excel Seal,Gair Oil,Break Oil", "amount": 5800.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "CY-1471", "item": "Labouring", "amount": 1500.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "RNS-1501", "item": "Break Oil", "amount": 250.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "AZN-9846", "item": "Engine Oil,Tanki Ruber,Indicator Ruber", "amount": 750.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "Lifter Patrol", "item": "tyre punture", "amount": 500.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "All Vehicles", "item": "Tools Purchase By Waqas", "amount": 2110.0, "receiver": "waqas"}, {"date": "2026-07-26", "vehicleNo": "Generator", "item": "Fan Belt,Governer,Butterfly,Menifuel,Labouring", "amount": 20750.0, "receiver": "waqas"}, {"date": "2026-08-03", "vehicleNo": 7956.0, "item": "Tyre Air", "amount": 100.0, "receiver": ""}, {"date": "2026-08-03", "vehicleNo": "RNS-1501", "item": "Pressure Pipe Welding & Labouring", "amount": 1000.0, "receiver": "Waqas"}, {"date": "2026-08-03", "vehicleNo": 6273.0, "item": "tyre punture", "amount": 200.0, "receiver": "Gull Bahar"}, {"date": "2026-08-04", "vehicleNo": "CAZ - 7956", "item": "Punture & Guts", "amount": 700.0, "receiver": "Asghar Chatha"}, {"date": "2026-08-05", "vehicleNo": "CAK - 635", "item": "tyre punture", "amount": 200.0, "receiver": ""}, {"date": "2026-08-05", "vehicleNo": "CAX - 3723", "item": "Punture & Wheel Machine", "amount": 650.0, "receiver": "Samma"}, {"date": "2026-08-06", "vehicleNo": "Lifter Diesel", "item": "Paso CL & ATF Oli", "amount": 7600.0, "receiver": "Waqas"}, {"date": "2026-08-13", "vehicleNo": 6070.0, "item": "Servise", "amount": 1000.0, "receiver": "Asgher Ali"}, {"date": "2026-08-13", "vehicleNo": 5776.0, "item": "Full Service & Diesel", "amount": 950.0, "receiver": "Waqas"}, {"date": "2026-08-13", "vehicleNo": 7040.0, "item": "Full Service & Diesel", "amount": 950.0, "receiver": "zubair"}, {"date": "2026-08-15", "vehicleNo": "CYY-1275", "item": "Repair & Maintance", "amount": 1000.0, "receiver": "Waqas"}, {"date": "2026-08-16", "vehicleNo": 7040.0, "item": "Seat & Dashboard Polishing + Labouring", "amount": 7050.0, "receiver": "Waqas"}, {"date": "2026-08-16", "vehicleNo": 7040.0, "item": "Seat Welding", "amount": 500.0, "receiver": "Waqas"}, {"date": "2026-08-16", "vehicleNo": "Lifter Diesel", "item": "Break Oil", "amount": 1130.0, "receiver": "Waqas"}, {"date": "2026-08-16", "vehicleNo": "BQA 001", "item": "Num Plate Frnt Side", "amount": 1000.0, "receiver": "Waqas"}, {"date": "2026-08-16", "vehicleNo": 635.0, "item": "Dash Board Reparing", "amount": 2270.0, "receiver": "Ameen"}, {"date": "2026-08-17", "vehicleNo": 5776.0, "item": "Puncture & Air", "amount": 500.0, "receiver": ""}, {"date": "2026-08-17", "vehicleNo": 3723.0, "item": "Full Service & Diesel", "amount": 1000.0, "receiver": "Shahid"}, {"date": "2026-08-17", "vehicleNo": 1501.0, "item": "Front Wheel Side New Purchase & Labouring", "amount": 8800.0, "receiver": "Waqas"}, {"date": "2026-08-18", "vehicleNo": 3178.0, "item": "Air Filling In Tyre", "amount": 100.0, "receiver": "Asgher ALi"}, {"date": "2026-08-18", "vehicleNo": 1501.0, "item": "Oil Filter", "amount": 500.0, "receiver": "Falak Helper"}, {"date": "2026-08-19", "vehicleNo": "BQA-001", "item": "Service & Polish", "amount": 1250.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 635.0, "item": "New Num Plate", "amount": 666.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 1501.0, "item": "New Num Plate", "amount": 667.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 6273.0, "item": "New Num Plate", "amount": 667.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 7040.0, "item": "Water For Radiator", "amount": 200.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 4952.0, "item": "Water For Radiator", "amount": 200.0, "receiver": "Waqas"}, {"date": "2026-08-19", "vehicleNo": 1501.0, "item": "Full Service & Diesel", "amount": 750.0, "receiver": "Samma"}, {"date": "2026-08-20", "vehicleNo": 635.0, "item": "Service + Diesel", "amount": 650.0, "receiver": "Ameen"}, {"date": "2026-08-20", "vehicleNo": 3243.0, "item": "Full Service & Diesel", "amount": 900.0, "receiver": "zafar"}, {"date": "2026-08-20", "vehicleNo": 4952.0, "item": "Full Service & Diesel", "amount": 900.0, "receiver": "Ashiq"}, {"date": "2026-08-20", "vehicleNo": 6805.0, "item": "Full Service & Diesel", "amount": 900.0, "receiver": "Zubair"}, {"date": "2026-08-25", "vehicleNo": 3178.0, "item": "Full Service & Diesel", "amount": 1000.0, "receiver": "Ameen"}, {"date": "2026-08-26", "vehicleNo": 4952.0, "item": "tyre punture", "amount": 500.0, "receiver": "Ashiq"}, {"date": "2026-08-26", "vehicleNo": 2773.0, "item": "Air Filling In Tyre", "amount": 200.0, "receiver": "Waqas"}, {"date": "2026-08-27", "vehicleNo": "Lifter Diesel", "item": "Jet Labouring To Kanwer By GHullam Nabi", "amount": 3000.0, "receiver": "Ghullam Nabi"}, {"date": "2026-08-30", "vehicleNo": "RNS-1501", "item": "1 New Tyre Purchase + Fitting Labouring", "amount": 43250.0, "receiver": "Waqas"}, {"date": "2026-08-30", "vehicleNo": 3178.0, "item": "Tyre Puncture", "amount": 350.0, "receiver": "Ameen"}]}, {"key": "diesel", "label": "Diesel Fuel", "color": "#2E5C8A", "fields": [{"id": "vehicleNo", "label": "Vehicle No", "type": "text"}, {"id": "item", "label": "Item Detail", "type": "text"}, {"id": "rate", "label": "Rate (optional)", "type": "number"}, {"id": "liters", "label": "Total Liters (optional)", "type": "number"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-01", "vehicleNo": 9846.0, "item": "Patrol 1.64 Ltr", "amount": 500.0, "rate": 304.88, "liters": 1.64}, {"date": "2026-07-06", "vehicleNo": "All", "item": "Fahad Patrolium Bill June-26", "amount": 1073950.0, "rate": "-", "liters": "-"}, {"date": "2026-08-08", "vehicleNo": "All", "item": "Fahad Patrolium Bill July-26", "amount": 9416673.0, "rate": "-", "liters": "-"}, {"date": "2026-08-20", "vehicleNo": 9846.0, "item": "Petrol 1.52 Ltr", "amount": 500.0, "rate": 329.7, "liters": 1.52}]}, {"key": "stationary", "label": "Stationary", "color": "#AD7A25", "fields": [{"id": "item", "label": "Item Details", "type": "text"}, {"id": "qty", "label": "Quantity", "type": "text"}, {"id": "price", "label": "Per Item Price (optional)", "type": "number"}], "amountLabel": "Total Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-02", "item": "Purchase Ring Rubber for Cash 2 Packs", "qty": "2 Packs", "price": 650.0, "amount": 1300.0}, {"date": "2026-07-05", "item": "Tonner refill", "qty": 1.0, "price": 1000.0, "amount": 1000.0}, {"date": "2026-07-09", "item": "purchasing register (in out) expence", "qty": 1150.0, "price": "", "amount": 1150.0}, {"date": "2026-07-09", "item": "stamp ink purchase", "qty": 1.0, "price": 400.0, "amount": 400.0}, {"date": "2026-07-11", "item": "Printer repair Hp4015&3015", "qty": 2.0, "price": "-", "amount": 2500.0}, {"date": "2026-07-15", "item": "Register for attendance", "qty": 1.0, "price": 500.0, "amount": 500.0}, {"date": "2026-07-15", "item": "Register for Vehicle Maintenance", "qty": 1.0, "price": 1000.0, "amount": 1000.0}, {"date": "2026-07-16", "item": "Paper Rim for Printer Bill Perinting", "qty": 30.0, "price": 815.0, "amount": 24450.0}, {"date": "2026-07-19", "item": "Printer 4015 Teflon Change", "qty": 1.0, "price": 5000.0, "amount": 5000.0}, {"date": "2026-07-19", "item": "Printer 4015 Toner Refill", "qty": 1.0, "price": 1000.0, "amount": 1000.0}, {"date": "2026-07-19", "item": "Printer 3015 Toner Refill", "qty": 1.0, "price": 1000.0, "amount": 1000.0}, {"date": "2026-07-21", "item": "Pencil , Ruber , Shopner", "qty": 6.0, "price": "", "amount": 200.0}, {"date": "2026-07-22", "item": "Employee Cards 46", "qty": 46.0, "price": 200.0, "amount": 9200.0}, {"date": "2026-07-30", "item": "3015 Printer Tooner Refil", "qty": "", "price": "", "amount": 1200.0}, {"date": "2026-08-09", "item": "Printer Tonner Refill", "qty": "", "price": "", "amount": 1000.0}, {"date": "2026-08-10", "item": "2 Marker & 2 Croection", "qty": 4.0, "price": 73.0, "amount": 290.0}, {"date": "2026-08-17", "item": "New Tonner Purchase 55A", "qty": "", "price": "", "amount": 5400.0}, {"date": "2026-08-17", "item": "30 Paper Rim", "qty": 30.0, "price": 815.0, "amount": 24450.0}]}, {"key": "kitchen", "label": "Kitchen / Water Bills", "color": "#2E6B4F", "fields": [{"id": "item", "label": "Item Details", "type": "text"}], "amountLabel": "Total Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-01", "item": "Drinking Water 26 Canes", "amount": 1560.0}, {"date": "2026-07-01", "item": "Wheat Granding", "amount": 1800.0}, {"date": "2026-07-01", "item": "Ice,Vegetables,Chicken", "amount": 14950.0}, {"date": "2026-07-02", "item": "LPG gas cylender refill 12 kg", "amount": 3950.0}, {"date": "2026-07-04", "item": "2 pcs of jug for office", "amount": 880.0}, {"date": "2026-07-04", "item": "31 bottles 60x31", "amount": 1860.0}, {"date": "2026-07-05", "item": "Grocery for kitchen", "amount": 16260.0}, {"date": "2026-07-05", "item": "15 can of drinking water", "amount": 900.0}, {"date": "2026-07-06", "item": "20 can of drinking water", "amount": 1200.0}, {"date": "2026-07-07", "item": "Riaz Ahmad Cook Salary 8 Days", "amount": 8000.0}, {"date": "2026-07-07", "item": "15 Cane's of Drinking Water", "amount": 900.0}, {"date": "2026-07-08", "item": "26 Cane's of Drinking Water", "amount": 1560.0}, {"date": "2026-07-09", "item": "Wheat Granding Eatable", "amount": 3400.0}, {"date": "2026-07-09", "item": "Chicken 10 Kg", "amount": 4000.0}, {"date": "2026-07-09", "item": "Ice 1 Weak, water tank, vegitables", "amount": 17730.0}, {"date": "2026-07-09", "item": "Chicken 10 Kg & Vegitables", "amount": 9240.0}, {"date": "2026-07-09", "item": "2kg youguot", "amount": 240.0}, {"date": "2026-07-09", "item": "Recipie masala by Nabi Bux", "amount": 3600.0}, {"date": "2026-07-10", "item": "Drinking Water", "amount": 0.0}, {"date": "2026-07-10", "item": "Atta Pisai", "amount": 0.0}, {"date": "2026-07-10", "item": "Ice + Sabzi + Chicken", "amount": 0.0}, {"date": "2026-07-11", "item": "cash paid for drinking water", "amount": 1740.0}, {"date": "2026-07-13", "item": "youngart 1 kg, patato 3 kg", "amount": 500.0}, {"date": "2026-07-13", "item": "Cash is paid for drinking Water", "amount": 1200.0}, {"date": "2026-07-13", "item": "Cash is paid for drinking Water-25cane", "amount": 1500.0}, {"date": "2026-07-13", "item": "cash paid daily wedges 6 day Riaz", "amount": 6000.0}, {"date": "2026-07-15", "item": "26 Canes Drinking Water", "amount": 1560.0}, {"date": "2026-07-16", "item": "15 Cans Drinking Water", "amount": 900.0}, {"date": "2026-07-16", "item": "Vegetables,Ice,Chicken 6kg,Shampoo", "amount": 21550.0}, {"date": "2026-07-18", "item": "26 Cane's Drinking Water", "amount": 1560.0}, {"date": "2026-07-19", "item": "17 Cane's Drinking Water", "amount": 1020.0}, {"date": "2026-07-20", "item": "20 Cane's Drinking Water", "amount": 1200.0}, {"date": "2026-07-22", "item": "28 Cane's Drinking Water", "amount": 1680.0}, {"date": "2026-07-22", "item": "LPG Cylender Refill 12.80 Kg", "amount": 5000.0}, {"date": "2026-07-25", "item": "Grocery Items", "amount": 21630.0}, {"date": "2026-07-25", "item": "Vegetables,Ice,Chicken,Birayani Masala", "amount": 24170.0}, {"date": "2026-07-25", "item": "27 Cane's Drinking Water", "amount": 1620.0}, {"date": "2026-07-26", "item": "2 Kg Tea Danedar", "amount": 3600.0}, {"date": "2026-07-26", "item": "21 Cane's Drinking Water", "amount": 1260.0}, {"date": "2026-07-27", "item": "2 Bags Dany Daar Tea", "amount": 5280.0}, {"date": "2026-07-27", "item": "2 KG Lemon", "amount": 400.0}, {"date": "2026-07-27", "item": "9 Can OF Drinking Water", "amount": 540.0}, {"date": "2026-07-28", "item": "30 Can OF Drinking Water", "amount": 1800.0}, {"date": "2026-07-29", "item": "20 Can OF Drinking Water", "amount": 1200.0}, {"date": "2026-07-30", "item": "Grocery Items + Vegitabels", "amount": 25430.0}, {"date": "2026-08-02", "item": "50 Can Of Drinking Water", "amount": 3000.0}, {"date": "2026-08-03", "item": "Vegetables", "amount": 4000.0}, {"date": "2026-08-03", "item": "Chicken", "amount": 2700.0}, {"date": "2026-08-03", "item": "Cylinder Gas Refill", "amount": 4000.0}, {"date": "2026-08-04", "item": "Dry Recipe Masala", "amount": 2830.0}, {"date": "2026-08-05", "item": "1 Kg Milk Purchase For Hafiz saab Guests", "amount": 250.0}, {"date": "2026-08-05", "item": "Wood 20 Mnds & 25 Kg", "amount": 20675.0}, {"date": "2026-08-05", "item": "43 Can Of Drinking Water", "amount": 2580.0}, {"date": "2026-08-09", "item": "41 can Of Drinking Water", "amount": 2460.0}, {"date": "2026-08-10", "item": "Vegetables + Chiken", "amount": 13750.0}, {"date": "2026-08-10", "item": "Clothes for Kitchen", "amount": 2640.0}, {"date": "2026-08-10", "item": "Butter & Yougurt", "amount": 700.0}, {"date": "2026-08-10", "item": "Ice", "amount": 9000.0}, {"date": "2026-08-11", "item": "Kitchen Grocery By Nabi Bux", "amount": 48000.0}, {"date": "2026-08-11", "item": "30 Can of Drinking Water", "amount": 1800.0}, {"date": "2026-08-12", "item": "25  Can of Drinking Water", "amount": 1500.0}, {"date": "2026-08-13", "item": "Gas Cylinder Refil", "amount": 5600.0}, {"date": "2026-08-13", "item": "Vegetabels & Chicken", "amount": 15020.0}, {"date": "2026-08-13", "item": "20  Can of Drinking Water", "amount": 1240.0}, {"date": "2026-08-15", "item": "24  Can of Drinking Water", "amount": 1440.0}, {"date": "2026-08-16", "item": "15  Can of Drinking Water", "amount": 900.0}, {"date": "2026-08-17", "item": "10  Can of Drinking Water", "amount": 600.0}, {"date": "2026-08-18", "item": "18  Can of Drinking Water", "amount": 1080.0}, {"date": "2026-08-18", "item": "Coriander ,Tamarind , Plum", "amount": 1500.0}, {"date": "2026-08-19", "item": "17  Can of Drinking Water", "amount": 1020.0}, {"date": "2026-08-20", "item": "Vegetables & Chicken", "amount": 16670.0}, {"date": "2026-08-20", "item": "16 Can of Drinking Water", "amount": 960.0}, {"date": "2026-08-22", "item": "20 Can of Drinking Water", "amount": 1200.0}, {"date": "2026-08-24", "item": "25 Can of Drinking Water", "amount": 1500.0}, {"date": "2026-08-24", "item": "Gas Cylinder Refil", "amount": 4500.0}, {"date": "2026-08-25", "item": "Vegetables + Chicken + Ice", "amount": 7650.0}, {"date": "2026-08-25", "item": "20 Can of Drinking Water", "amount": 1200.0}, {"date": "2026-08-27", "item": "5 Bags OF Rice By Ghullam Nabi", "amount": 41750.0}, {"date": "2026-08-29", "item": "23 Cans OF Drinking Water", "amount": 1380.0}, {"date": "2026-08-30", "item": "Chicken + Vegetables", "amount": 10080.0}, {"date": "2026-08-30", "item": "13 Cans OF Drinking Water", "amount": 1080.0}]}, {"key": "refreshments", "label": "Refreshments", "color": "#7a5c8a", "fields": [{"id": "item", "label": "Item Detail", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-02", "item": "Cake for Celebration of 2nd Quarter", "amount": 4300.0}, {"date": "2026-07-02", "item": "5 bottles 2 litres", "amount": 1000.0}, {"date": "2026-07-02", "item": "Al Asar resturant for dinner hafiz sab", "amount": 4220.0}, {"date": "2026-07-23", "item": "Biscuits 4 Box For Guests", "amount": 1090.0}, {"date": "2026-07-26", "item": "Chicken Karahi For Guests Zaiqa Res", "amount": 1184.0}, {"date": "2026-08-01", "item": "Al Asar resturant for dinner hafiz sab", "amount": 7000.0}, {"date": "2026-08-19", "item": "Mutton Karahi For Sajid Saab Guests", "amount": 3960.0}, {"date": "2026-08-22", "item": "Biscuits 6 Box For Guests", "amount": 1642.0}, {"date": "2026-08-23", "item": "Murgh Desi Karahi By Sajid Saab (18-08-26)", "amount": 4220.0}, {"date": "2026-08-29", "item": "DamPikht Siji By Hafiz Saab", "amount": 6460.0}]}, {"key": "salary", "label": "Salary Sheet", "color": "#16232E", "fields": [{"id": "item", "label": "Item Detail", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-02", "item": "Special Incentive on target Ach", "amount": 205000.0}, {"date": "2026-07-30", "item": "Special Incentive on target Ach to Anas Khalil", "amount": 30000.0}, {"date": "2026-08-03", "item": "Salary FMO July - 26", "amount": 157002.0}, {"date": "2026-08-04", "item": "Salary FMO July - 26", "amount": 203333.0}, {"date": "2026-08-05", "item": "Salary FMO July - 26", "amount": 130833.0}, {"date": "2026-08-06", "item": "Salary FMO July - 26", "amount": 736646.0}, {"date": "2026-08-10", "item": "Salary FMO July - 26", "amount": 906211.0}, {"date": "2026-08-11", "item": "Salary FMO July - 26", "amount": 96231.0}, {"date": "2026-08-12", "item": "Salary FMO July - 26", "amount": 85239.0}, {"date": "2026-08-13", "item": "Salary FMO August - 26", "amount": 11681.0}]}, {"key": "animal", "label": "Animal Expense", "color": "#4a7a9e", "fields": [{"id": "item", "label": "Animal Food Details", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-01", "item": "1 Kanal 3 Marlas Grass ( Jawaar)", "amount": 41000.0}, {"date": "2026-07-02", "item": "Medicine ,Mouth Catcher, Grass,Lemon 80 Kg Shampoo 4 Bottles, 2 Plastic Dishes", "amount": 9820.0}, {"date": "2026-07-02", "item": "Plastic Tank For Water Storage of Animals", "amount": 2500.0}, {"date": "2026-07-05", "item": "Animal feed 2 bori", "amount": 8200.0}, {"date": "2026-07-06", "item": "Medinine for animals", "amount": 2150.0}, {"date": "2026-07-07", "item": "Saunf 2 Bags & Medicines", "amount": 17200.0}, {"date": "2026-07-08", "item": "Shampo for animals 5kg", "amount": 2500.0}, {"date": "2026-07-09", "item": "Medicine for goad", "amount": 750.0}, {"date": "2026-07-09", "item": "4 canal green grass", "amount": 14000.0}, {"date": "2026-07-09", "item": "RYK Medicine E Dr.", "amount": 2500.0}, {"date": "2026-07-09", "item": "Drip Dr. Sadique Ahmed", "amount": 500.0}, {"date": "2026-07-13", "item": "5 Kg bajri dana", "amount": 900.0}, {"date": "2026-07-14", "item": "50Kg bag cotton seed, Bags Bran", "amount": 11450.0}, {"date": "2026-07-16", "item": "Wheat Grand,Medicine,Yogurt,Dr,Lemon,Shampoo", "amount": 16010.0}, {"date": "2026-07-22", "item": "4 Kanal Jantar", "amount": 15000.0}, {"date": "2026-07-25", "item": "Medicine", "amount": 2546.0}, {"date": "2026-07-25", "item": "2 Bags Wanda", "amount": 8260.0}, {"date": "2026-07-25", "item": "Medicine,Grass,2 Water Tank", "amount": 13946.0}, {"date": "2026-07-27", "item": "2 Bags Khull", "amount": 7800.0}, {"date": "2026-07-28", "item": "24 Marla Janter Riaz Ahmad C/O Ghullam Nabi", "amount": 7000.0}, {"date": "2026-07-28", "item": "Birds Feed", "amount": 500.0}, {"date": "2026-07-29", "item": "Medicines For Animals", "amount": 3340.0}, {"date": "2026-07-30", "item": "Tooka R&M", "amount": 400.0}, {"date": "2026-07-30", "item": "Daliya Pesai", "amount": 2500.0}, {"date": "2026-07-30", "item": "Medicines For Animals", "amount": 5500.0}, {"date": "2026-07-30", "item": "Petrol Rikshaw", "amount": 500.0}, {"date": "2026-07-30", "item": "3.5 Kg Shampoo", "amount": 1750.0}, {"date": "2026-08-03", "item": "5 Bags of Chokar", "amount": 7350.0}, {"date": "2026-08-03", "item": "3 Bags of Khal", "amount": 11700.0}, {"date": "2026-08-03", "item": "Water Tank", "amount": 3000.0}, {"date": "2026-08-03", "item": "Lemon 80 Kg", "amount": 2000.0}, {"date": "2026-08-04", "item": "5 Kannal Jantar Purchase By Ghullam Nabi", "amount": 30000.0}, {"date": "2026-08-10", "item": "Medicines For Animals", "amount": 871.0}, {"date": "2026-08-10", "item": "Lemon 120 Kg", "amount": 2000.0}, {"date": "2026-08-10", "item": "Water Tank", "amount": 3000.0}, {"date": "2026-08-11", "item": "Tazza Ghee For Animals By GHullam nabi", "amount": 5800.0}, {"date": "2026-08-13", "item": "Medicens & Bran 5 Bags", "amount": 24070.0}, {"date": "2026-08-19", "item": "Khal & Chokar", "amount": 20100.0}, {"date": "2026-08-20", "item": "Medicines + Lemons + Daliya", "amount": 10774.0}, {"date": "2026-08-24", "item": "Wanda 2 Bags By Ghullam Nabi", "amount": 8200.0}, {"date": "2026-08-25", "item": "Lemon + Water Tank +Yougurt", "amount": 5720.0}, {"date": "2026-08-25", "item": "July to August Dr Adeel Fees", "amount": 2000.0}, {"date": "2026-08-26", "item": "3 Bags Of Khall & 8 Bags Of Brass", "amount": 22600.0}, {"date": "2026-08-27", "item": "Wood Work By Ghullam Nabi to Ab. Ghaffar", "amount": 8000.0}, {"date": "2026-08-29", "item": "Water Tank", "amount": 3000.0}, {"date": "2026-08-30", "item": "Medicines For Animals", "amount": 5147.0}]}, {"key": "internet", "label": "Internet", "color": "#5c8a6b", "fields": [{"id": "item", "label": "Internet Bill Detail", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-01-07", "item": "Month of May & June-26 Net Bill", "amount": 9000.0}, {"date": "2026-07-07", "item": "Mobile Internet Call Package Sheraz Sb", "amount": 1700.0}, {"date": "2026-10-08", "item": "Mobile Call & Internet  Package Sheraz Sb", "amount": 1700.0}]}, {"key": "salecounter", "label": "Sale Counter / Misc.", "color": "#9e4a5c", "fields": [{"id": "item", "label": "Items Detail", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-02", "item": "Envelopes for Amount Distribution PS", "amount": 200.0}, {"date": "2026-07-02", "item": "purchase shopper for stock", "amount": 3200.0}, {"date": "2026-07-05", "item": "Electric blower for cleaning purpose", "amount": 5200.0}, {"date": "2026-07-06", "item": "shower , opner", "amount": 230.0}, {"date": "2026-07-06", "item": "5kg shopper for wearhouse 700x5", "amount": 3500.0}, {"date": "2026-07-09", "item": "windwo installation sheraz sab comp", "amount": 400.0}, {"date": "2026-07-12", "item": "Key board + Data Cable", "amount": 900.0}, {"date": "2026-07-12", "item": "cashire room Ac gas filling", "amount": 3500.0}, {"date": "2026-07-12", "item": "safai ka saman, acid, cloth piced", "amount": 2800.0}, {"date": "2026-07-21", "item": "Detol Hand Wash For HM Sajid Sb Office", "amount": 530.0}, {"date": "2026-07-22", "item": "Panaflex for Coke , Sprite Zero Advertisment", "amount": 4800.0}, {"date": "2026-07-27", "item": "WD-40 for Guard Gun Cleaning", "amount": 550.0}, {"date": "2026-08-10", "item": "Chemical For Toilet & Shampo", "amount": 1600.0}, {"date": "2026-08-10", "item": "Carrier / Reri Puncture", "amount": 100.0}, {"date": "2026-08-12", "item": "WD-40 for Guard Gun Cleaning", "amount": 950.0}, {"date": "2026-08-18", "item": "Cash Machiene Repair", "amount": 1000.0}, {"date": "2026-08-18", "item": "Hand Wash & Floor Cleaner", "amount": 2750.0}, {"date": "2026-08-20", "item": "Sell & Tapes", "amount": 1340.0}, {"date": "2026-08-20", "item": "ASM Room Ac Gas Refil & Drainage Pipe Repair", "amount": 7000.0}, {"date": "2026-08-23", "item": "Ring Rubber For Cash", "amount": 750.0}, {"date": "2026-08-25", "item": "Pc Repair And Plant Cutter Reapir", "amount": 1850.0}, {"date": "2026-08-25", "item": "Tisse For Office And Kitchen", "amount": 1770.0}]}, {"key": "electricity", "label": "Electricity Expense", "color": "#a3874a", "fields": [{"id": "item", "label": "Items Detail", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-04", "item": "repairing three lights", "amount": 2500.0}, {"date": "2026-07-06", "item": "bill is paid for the month of june 26", "amount": 90145.0}, {"date": "2026-08-04", "item": "Bill is paid for the month of July - 26", "amount": 10875.0}]}, {"key": "newbuilding", "label": "New Building", "color": "#6b4f2e", "fields": [{"id": "item", "label": "Items Detail", "type": "text"}, {"id": "person", "label": "Person Name", "type": "text"}], "amountLabel": "Amount (Rs)", "computed": false, "seed": [{"date": "2026-07-02", "item": "5 Ac Fitting Charges", "amount": 10000.0, "person": "Ibrahim AC"}, {"date": "2026-07-02", "item": "2 Ac Service Charges", "amount": 3000.0, "person": "Ibrahim AC"}, {"date": "2026-07-02", "item": "Ac Gass Filling 150,50 Points", "amount": 12000.0, "person": "Ibrahim AC"}, {"date": "2026-07-02", "item": "Cash Paid to Shahmeer Vandor", "amount": 240000.0, "person": "Shahmeer"}, {"date": "2026-07-02", "item": "Paid to Ab Ghaffar Carpainter for Doors & Bidding", "amount": 16000.0, "person": "Ab Ghaffar"}, {"date": "2026-07-02", "item": "1 Baby Grander Disk For Marbell Cutting Carpainter", "amount": 850.0, "person": "Sami Ullah"}, {"date": "2026-07-02", "item": "M Anwer Painter 6 Days with Team 23 Days for paint of  Office", "amount": 34500.0, "person": "M Anwer"}, {"date": "2026-07-02", "item": "material for doors washrooms and admin block", "amount": 3130.0, "person": "Fahad awan"}, {"date": "2026-07-02", "item": "Anwer Painter with team 23 days work paint office", "amount": 34500.0, "person": "M Anwer"}, {"date": "2026-07-05", "item": "Marble granite +kiraya", "amount": 8150.0, "person": "Fahad awan"}, {"date": "2026-07-07", "item": "Slabs Purchased Ceiling for Birds Cage By Sajid Sb", "amount": 92000.0, "person": "Sajid Sb"}, {"date": "2026-07-08", "item": "Azeem khan tractor troli for briks uploading", "amount": 5000.0, "person": "Azeem Khan"}, {"date": "2026-07-08", "item": "Silicon for plumbers", "amount": 400.0, "person": "Sami Ullah"}, {"date": "2026-07-09", "item": "cash paid marble adjusted mosque side", "amount": 10500.0, "person": "Asif mistri"}, {"date": "2026-07-09", "item": "cash paid for wedges of painter", "amount": 25500.0, "person": "Mr. Anwar"}, {"date": "2026-07-09", "item": "cash paid for dor bindings", "amount": 20000.0, "person": "Abdul ghaffar"}, {"date": "2026-07-09", "item": "Saud Ceiling for Pailing Amount", "amount": 50000.0, "person": "Saud ceiling"}, {"date": "2026-07-11", "item": "cash paid for ceiling word", "amount": 43000.0, "person": "Saud ceiling"}, {"date": "2026-07-13", "item": "Glue and screw", "amount": 1570.0, "person": "Hamza"}, {"date": "2026-07-14", "item": "Kiraya Rikshaw cake Table", "amount": 800.0, "person": "Waqas"}, {"date": "2026-07-15", "item": "Foam & Steel Nail", "amount": 200.0, "person": "Waqas"}, {"date": "2026-07-16", "item": "Anwer Painter With Team 6 Days by 17 Labouring", "amount": 25500.0, "person": "M.Anwer"}, {"date": "2026-07-18", "item": "Sand Trolly  Purchase", "amount": 10000.0, "person": "Dilber"}, {"date": "2026-07-18", "item": "Rickshaw Fare 6 Iron Length For Store Gait", "amount": 500.0, "person": "G.Murtaza"}, {"date": "2026-07-23", "item": "Abdul Ghafar Carpainter", "amount": 7000.0, "person": "Abdul ghaffar"}, {"date": "2026-07-23", "item": "Mud for Saverage", "amount": 2500.0, "person": "Azeem Khan"}, {"date": "2026-07-23", "item": "M Anwer Painter 6 Days with Team 18 Days for paint of  Office", "amount": 27000.0, "person": "M Anwer"}, {"date": "2026-07-23", "item": "Asif Marbel Labourinfg", "amount": 19250.0, "person": "M Asif"}, {"date": "2026-07-25", "item": "Patrol for hamer Dumber Pressing main Gait Side", "amount": 500.0, "person": "Sajjad"}, {"date": "2026-07-26", "item": "Drill Bits For Carpanter Abdul Ghaffar", "amount": 1390.0, "person": "Adnan"}, {"date": "2026-07-27", "item": "Painter Khalil Advance C/O Anwer Painter", "amount": 4000.0, "person": "khalil"}, {"date": "2026-07-28", "item": "Abdul Ghafar Carpainter Door Closer Fitting", "amount": 6000.0, "person": "Abdul ghaffar"}, {"date": "2026-07-29", "item": "SandPaper For Door Polish", "amount": 1250.0, "person": "Asghar Polisher"}, {"date": "2026-07-30", "item": "Advance for Door Polishing", "amount": 25000.0, "person": "Asghar Polisher"}, {"date": "2026-07-30", "item": "Labouring of Paint Work 15 Days", "amount": 18500.0, "person": "MR. Anwar"}, {"date": "2026-07-30", "item": "Asif Marbel Labourinfg by Sajid Saab", "amount": 20000.0, "person": "Asif mistri"}, {"date": "2026-07-30", "item": "Door Polish Material", "amount": 4350.0, "person": "Asghar Polisher"}, {"date": "2026-08-02", "item": "Reeg Maar For Door Polish Work", "amount": 1875.0, "person": "Asghar Polisher"}, {"date": "2026-08-03", "item": "Bed Hammer Petrol", "amount": 679.0, "person": "Afzal"}, {"date": "2026-08-03", "item": "Bed Hammer Plug Labouring & Statring", "amount": 700.0, "person": "Waqas"}, {"date": "2026-08-03", "item": "Marbel Purchase", "amount": 54625.0, "person": "Tariq Arif"}, {"date": "2026-08-03", "item": "Material for doors polish", "amount": 2425.0, "person": "Asghar Polisher"}, {"date": "2026-08-04", "item": "Sand Trolly  Purchase", "amount": 10000.0, "person": "Wazeer"}, {"date": "2026-08-04", "item": "Water Supply Pipe Repair & New Socket Fit", "amount": 500.0, "person": ""}, {"date": "2026-08-05", "item": "Matrial For Door Polish", "amount": 11804.0, "person": "Asgher Polisher"}, {"date": "2026-08-05", "item": "28 Pices Of Marbel For Front Walking Place", "amount": 52420.0, "person": "Sardar"}, {"date": "2026-08-05", "item": "Matrial For Door Polish", "amount": 13350.0, "person": "Asgher Polisher"}, {"date": "2026-08-06", "item": "Paint Labouring Paid To Mr Anwar", "amount": 22500.0, "person": "Anwar"}, {"date": "2026-08-08", "item": "4 Packets Of Marbel Powerder", "amount": 600.0, "person": "Fahad"}, {"date": "2026-08-08", "item": "Grinding Buff For Anwar Painter", "amount": 500.0, "person": "Fahad"}, {"date": "2026-08-10", "item": "Cement Colour Powder", "amount": 1260.0, "person": "Waqas"}, {"date": "2026-08-10", "item": "Marbel Bill Paid To Usman", "amount": 28190.0, "person": "Shabeer Ahmed"}, {"date": "2026-08-10", "item": "Solar InverTor & Batteries Bill To Mr Ramzan By Sajid Saab", "amount": 135000.0, "person": "Hafiz Sajid Saab"}, {"date": "2026-08-11", "item": "Electric Room Celling Bill to Saud", "amount": 7000.0, "person": "Saud Ahmed"}, {"date": "2026-08-11", "item": "Marbel Cutting Disk", "amount": 1000.0, "person": "Waqas"}, {"date": "2026-08-11", "item": "Asif Marbel Labouring", "amount": 15500.0, "person": "Asif"}, {"date": "2026-08-11", "item": "Sardar Helper Marbel Labouring", "amount": 4000.0, "person": "Sardar"}, {"date": "2026-08-12", "item": "Material For Door Polish", "amount": 9900.0, "person": "Asgher Polisher"}, {"date": "2026-08-12", "item": "Cutting Disk & Marbel Powder", "amount": 3965.0, "person": "Waqas"}, {"date": "2026-08-13", "item": "Abdul Ghafar Car painter Advance for Door Fitting Of washrooms", "amount": 5000.0, "person": "Ghafar"}, {"date": "2026-08-13", "item": "Labouring of Paint Work 23 Days", "amount": 34500.0, "person": "MR Anwar"}, {"date": "2026-08-15", "item": "Polish Material For Doors", "amount": 21950.0, "person": "Asgher Polisher"}, {"date": "2026-08-16", "item": "Material For Polish", "amount": 1180.0, "person": "Asgher Polisher"}, {"date": "2026-08-16", "item": "Haiders For Kitchen Drawers", "amount": 240.0, "person": "Adnan"}, {"date": "2026-08-16", "item": "Glue + Colour Brush + Flower Plants", "amount": 4850.0, "person": "Fahad"}, {"date": "2026-08-17", "item": "Bolts 4 By 10", "amount": 870.0, "person": "Ab. Ghafar"}, {"date": "2026-08-17", "item": "Thiner & Wood Ceiler", "amount": 21750.0, "person": "Asgher Polisher"}, {"date": "2026-08-18", "item": "Wood Cutting IN round Shape For MAsjid Door", "amount": 700.0, "person": "Ab. Ghafar"}, {"date": "2026-08-19", "item": "Petrol For Vibrator Hammer", "amount": 500.0, "person": "Waqas"}, {"date": "2026-08-19", "item": "Furniture Polish Material For Hafiz Sajid Saab Room", "amount": 8030.0, "person": "Ali Asgher"}, {"date": "2026-08-19", "item": "2 Water Globe", "amount": 20000.0, "person": "FAhad"}, {"date": "2026-08-20", "item": "Labouring of Paint Work 24 Days", "amount": 36000.0, "person": "MR Anwar"}, {"date": "2026-08-22", "item": "Sand Trolly  Purchase", "amount": 9500.0, "person": "Nadeem"}, {"date": "2026-08-24", "item": "Bricks Purchased", "amount": 3500.0, "person": "Waqas"}, {"date": "2026-08-25", "item": "pipe ^ Plug For Hafiz Saab Ac", "amount": 1800.0, "person": "Waqas"}, {"date": "2026-08-25", "item": "Regmar Scraper for Mr Anwar", "amount": 7560.0, "person": "Fahad"}, {"date": "2026-08-27", "item": "Round Bar 3 Suter for Hafiz Saab Office Shelf", "amount": 940.0, "person": "Ab. Ghafar"}, {"date": "2026-08-27", "item": "Rikshaw Fare of Hafiz saab LCD", "amount": 1500.0, "person": "Ghullam NAbi"}, {"date": "2026-08-27", "item": "Colour Labouring To Mr. Anwar", "amount": 34500.0, "person": "MR Anwar"}, {"date": "2026-08-27", "item": "Furniture Polish Material & Masking Tape", "amount": 6580.0, "person": "Asgher Polisher"}, {"date": "2026-08-29", "item": "2 Bags OF DG Cement", "amount": 3260.0, "person": "Waqas"}, {"date": "2026-08-29", "item": "Sand Trolly  Purchase", "amount": 9500.0, "person": "Ghullam NAbi"}, {"date": "2026-08-30", "item": "Advance for Paint Work", "amount": 4000.0, "person": "Khalil painter"}]}, {"key": "personalloan", "label": "Personal Loan", "color": "#3f7a72", "fields": [{"id": "item", "label": "Purpose", "type": "text"}, {"id": "personName", "label": "Person Name", "type": "text"}, {"id": "loanAmount", "label": "Loan / Advance Amount", "type": "number"}, {"id": "returnAmount", "label": "Amount Returned", "type": "number"}], "amountLabel": "Net Outstanding (Rs)", "computed": true, "seed": [{"date": "2026-07-02", "item": "2 Crates of Bottle", "personName": "Ghulam nabi", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2160.0}, {"date": "2026-07-02", "item": "Advance salary", "personName": "Umar helper animal", "loanAmount": 25000.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-07-07", "item": "Advance Salary FMO- July-26", "personName": "Hamza Qasim", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-08", "item": "Empty checker", "personName": "Badal Khan", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-09", "item": "Advance Salary FMO- July-26", "personName": "Khalid Mahmood", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-09", "item": "Advance Salary FMO- July-26", "personName": "Munawer", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 8500.0}, {"date": "2026-07-09", "item": "Advance Salary FMO- July-26", "personName": "Ghulam Mustafa", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-09", "item": "Advance Salary FMO- July-26", "personName": "Peer Meer Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-07-09", "item": "Advance Salary FMO- July-26", "personName": "Hafeez helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-11", "item": "Advance Salary FMO- July-26", "personName": "Hamza Islam", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-11", "item": "Advance Salary FMO- July-26", "personName": "Ajmal LSC", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-07-11", "item": "Advance Salary FMO- July-26", "personName": "Fahad Rehman", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-07-12", "item": "Advance Salary FMO- July-26", "personName": "Abdul salam", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-07-12", "item": "Advance Salary FMO- July-26", "personName": "Abdul Manan", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-14", "item": "Advance Salary FMO- July-26", "personName": "Ghareeb Zada", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-14", "item": "Advance Salary FMO- July-26", "personName": "Bada Gee", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-14", "item": "Advance Salary FMO- July-26", "personName": "Sheraz Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-07-14", "item": "Advance Salary FMO- July-26", "personName": "M. Ikram", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-15", "item": "Advance Salary FMO- July-26", "personName": "Riaz Ahmad", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-16", "item": "Advance Salary FMO- July-26", "personName": "M.Zahid", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-07-16", "item": "Advance Salary FMO- July-26", "personName": "M.Kamran", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 6000.0}, {"date": "2026-07-18", "item": "Advance Salary FMO- July-26", "personName": "Sadiq Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-07-20", "item": "Advance Salary FMO- July-26", "personName": "Sheraz Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-20", "item": "Advance Salary FMO- July-26", "personName": "Sajjad Hameed", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-20", "item": "Advance Salary FMO- July-26", "personName": "Imran Ul Haq", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 40000.0}, {"date": "2026-07-22", "item": "Advance Salary FMO- July-26", "personName": "Aman Ullah", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-07-22", "item": "Advance Salary FMO- July-26", "personName": "Jumshaid Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 1000.0}, {"date": "2026-07-23", "item": "Advance Salary FMO- July-26", "personName": "M Abdullah", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 1000.0}, {"date": "2026-07-23", "item": "Advance Salary FMO- July-26", "personName": "Raj Kumaar", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 4000.0}, {"date": "2026-07-23", "item": "Advance Salary FMO- July-26", "personName": "Khalid Mehood", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-07-23", "item": "Advance Salary FMO- July-26", "personName": "Sheraz Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-23", "item": "Advance Salary FMO- July-26", "personName": "Badil Gee", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-25", "item": "Advance Salary FMO- July-26", "personName": "Zaffar Bhatti", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-07-26", "item": "Advance Salary FMO- July-26", "personName": "Ghullam Mutafa", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-07-27", "item": "Advance Salary FMO- July-26", "personName": "Umer Balouch", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-27", "item": "Advance Salary FMO- July-26", "personName": "Ghuillam Nabi", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-28", "item": "Advance Salary FMO- July-26", "personName": "Ubaidullah / Waqas", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-29", "item": "Advance Salary FMO- July-26", "personName": "M Hafeez Helper 195", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-07-30", "item": "Advance Salary FMO- July-26", "personName": "Rehan Sarki", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-07-30", "item": "Advance Salary FMO- July-26", "personName": "Mubashir / Zaheer", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-07-30", "item": "Advance Salary FMO- July-26", "personName": "Ghullam Murtaza Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-02", "item": "Advance Salary FMO- August-26", "personName": "Ghreeb Nawaz", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-08-02", "item": "Advance Salary FMO- August-26", "personName": "Ameen Dm", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 9000.0}, {"date": "2026-08-05", "item": "Advance Salary FMO- August-26", "personName": "Ghullam Murtaza Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-08-06", "item": "Advance Salary FMO- August-26", "personName": "Zafar Iqbal DM", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-08-06", "item": "Advance For Door Polish Work", "personName": "Asgher Ali Furniture Polisher", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-08-08", "item": "Advance Salary FMO- August-26", "personName": "Riaz Ahmad DM", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-09", "item": "Advance Salary FMO- August-26", "personName": "Zubair Dm", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 7460.0}, {"date": "2026-08-10", "item": "Advance Salary FMO- August-26", "personName": "Ubaidullah / Waqas", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-10", "item": "Advance Salary FMO- August-26", "personName": "Badil G", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-10", "item": "Advance Salary FMO- August-26", "personName": "Ghareeb Zada", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-11", "item": "Advance Salary FMO- August-26", "personName": "Zaffar  DM", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 4000.0}, {"date": "2026-08-12", "item": "Advance Salary FMO- August-26", "personName": "Sheraz Ali", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 12000.0}, {"date": "2026-08-13", "item": "Advance Salary FMO- August-26", "personName": "Ikram Shar", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-13", "item": "Advance For Door Polish Work", "personName": "Asgher Ali Furniture Polisher", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-08-13", "item": "Advance Salary FMO- August-26", "personName": "Amir PS", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-08-13", "item": "Advance Salary FMO- August-26", "personName": "Khalid Mehood DM", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "Ubaidullah / Waqas", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 200.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "Abdul Salam SG", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "Ajmal SG", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "Amman Ullah DM", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 15000.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "Altaf Hussain Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-15", "item": "Advance Salary FMO- August-26", "personName": "M Zahid Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-16", "item": "Advance Salary FMO- August-26", "personName": "M Ameen Dm", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-17", "item": "Advance Salary FMO- August-26", "personName": "Badil G Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 1000.0}, {"date": "2026-08-18", "item": "Advance Salary FMO- August-26", "personName": "Nabi Bux Lifter Operator", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-18", "item": "Cash Paid By Hafiz Sajid Saab", "personName": "Ab. Ghafar Carpainter", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-19", "item": "Advance Salary FMO- August-26", "personName": "Ghareeb Zada", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 27000.0}, {"date": "2026-08-19", "item": "Advance Salary FMO- August-26", "personName": "M Hafeez Helper 195", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-08-20", "item": "Advance Salary FMO- August-26", "personName": "M Ishfaq Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-20", "item": "Advance Salary FMO- August-26", "personName": "Sadiq Ali helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-20", "item": "Advance Salary FMO- August-26", "personName": "Abdullah Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-08-20", "item": "Advance For Masjid Door Fitting", "personName": "Ab Ghaffar", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-20", "item": "Advance For Door Polish Work", "personName": "Asgher Ali Furniture Polisher", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 25000.0}, {"date": "2026-08-22", "item": "Advance Salary FMO- August-26", "personName": "Kamran Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-23", "item": "Advance Salary FMO- August-26", "personName": "Riaz Dm", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-23", "item": "Advance Salary FMO- August-26", "personName": "Farooq Sheikh Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 19167.0}, {"date": "2026-08-23", "item": "Loan", "personName": "Lal BUX", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 50000.0}, {"date": "2026-08-23", "item": "Advance Salary FMO- August-26", "personName": "Badil Khan", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-08-25", "item": "Advance Salary FMO- August-26", "personName": "Nabi Bux Lifter Operator", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 10000.0}, {"date": "2026-08-25", "item": "Advance Salary FMO- August-26", "personName": "Mubashir / Zaheer", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-25", "item": "Advance For Door Polish Work", "personName": "Asgher Ali Furniture Polisher", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-08-26", "item": "Advance Salary FMO- August-26", "personName": "M Hafeez Helper 195", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 20000.0}, {"date": "2026-08-26", "item": "Advance Salary FMO- August-26", "personName": "M Ameen Dm", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-27", "item": "Advance Salary FMO- August-26", "personName": "M. Abdullah Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 3000.0}, {"date": "2026-08-27", "item": "Advance Salary FMO- August-26", "personName": "M.Ikram Cook", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}, {"date": "2026-08-29", "item": "Advance Salary FMO- August-26", "personName": "Ghullam Murtaza Helper", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 5000.0}, {"date": "2026-08-30", "item": "Advance Salary FMO- August-26", "personName": "Sajjad Hameed", "loanAmount": 0.0, "returnAmount": 0.0, "amount": 2000.0}]}];
+
+/* ============ UTIL ============ */
+const PURCHASE_SEED = [{"date": "2026-06-25", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": 6.0, "invoiceNo": "9022675494.0", "qtyPet": 24.0, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022657630.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022715791.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022715774.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022715785.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-28", "month": "June", "product": "Coke", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022718868.0", "qtyPet": null, "qty": 60.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 60.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": 9.0, "invoiceNo": "9022656628.0", "qtyPet": 6.0, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022649493.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022646853.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022648336.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022646730.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022698677.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022698891.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-26", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022697470.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022699930.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": 11.0, "invoiceNo": "9022647332.0", "qtyPet": 6.0, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-24", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022652577.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022657232.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022657689.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022655995.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022669949.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022669358.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022697760.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022702286.0", "qtyPet": null, "qty": 770.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 6.2, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022713692.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022715454.0", "qtyPet": null, "qty": 1100.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 9.0, "mtQty": 0.0}, {"date": "2026-06-30", "month": "June", "product": "Coke", "size": "250ml (can)", "totalInvoices": 1.0, "invoiceNo": "9022766086.0", "qtyPet": 12.0, "qty": 310.0, "rate": 1136.87, "marginPct": 0.0624, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": 19.0, "invoiceNo": "9022657567.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022667018.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022665822.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022665757.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022664154.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022668309.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022670073.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022666492.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022703120.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022699049.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022704641.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022708083.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022723217.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022711894.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022718833.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-30", "month": "June", "product": "Coke", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022766888.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Coke", "size": "500ml (P-100)", "totalInvoices": 2.0, "invoiceNo": "9022718869.0", "qtyPet": 12.0, "qty": 154.0, "rate": 1136.87, "marginPct": 0.0552, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-30", "month": "June", "product": "Coke", "size": "500ml (P-100)", "totalInvoices": null, "invoiceNo": "9022766086.0", "qtyPet": 12.0, "qty": 154.0, "rate": 1136.87, "marginPct": 0.0552, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Coke", "size": "350ml", "totalInvoices": 1.0, "invoiceNo": "9022655276.0", "qtyPet": 12.0, "qty": 1960.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 10.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "250ml (RGB)", "totalInvoices": 1.0, "invoiceNo": "9022673441.0", "qtyPet": 24.0, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022675493.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-27", "month": "June", "product": "Sprite", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022703388.0", "qtyPet": null, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": 2.0, "invoiceNo": "9022657512.0", "qtyPet": 6.0, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022657511.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022650037.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022652331.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022656633.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Sprite", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022699929.0", "qtyPet": null, "qty": 2016.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1500ml(lemon)", "totalInvoices": 2.0, "invoiceNo": "9022673443.0", "qtyPet": 6.0, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1500ml(lemon)", "totalInvoices": null, "invoiceNo": "9022669948.0", "qtyPet": null, "qty": 880.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 8.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1500ml(lemon)", "totalInvoices": null, "invoiceNo": "9022652574.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1500ml(lemon)", "totalInvoices": null, "invoiceNo": "9022657722.0", "qtyPet": null, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Sprite", "size": "1500ml(lemon)", "totalInvoices": null, "invoiceNo": "9022718868.0", "qtyPet": null, "qty": 110.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "1500ml (Mint)", "totalInvoices": null, "invoiceNo": "9022669948.0", "qtyPet": 6.0, "qty": 110.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "500ml (P-100) Mint", "totalInvoices": null, "invoiceNo": "9022669948.0", "qtyPet": 12.0, "qty": 154.0, "rate": 1136.87, "marginPct": 0.0552, "palletRs": 4100.0, "palletQty": 1.5, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Sprite", "size": "500ml (P-100) Mint", "totalInvoices": null, "invoiceNo": "9022718868.0", "qtyPet": 12.0, "qty": 154.0, "rate": 1136.87, "marginPct": 0.0552, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": 2.0, "invoiceNo": "9022657261.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022669948.0", "qtyPet": 6.0, "qty": 160.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 1.5, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022668093.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022664801.0", "qtyPet": 6.0, "qty": 960.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022659619.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022666494.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022674786.0", "qtyPet": 6.0, "qty": 1440.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 18.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "June", "product": "Sprite", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022715828.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Sprite", "size": "500ml(P-100)lemon", "totalInvoices": null, "invoiceNo": "9022718869.0", "qtyPet": 12.0, "qty": 154.0, "rate": 1136.87, "marginPct": 0.0552, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "350ml (lemon)", "totalInvoices": 2.0, "invoiceNo": "9022657629.0", "qtyPet": 12.0, "qty": 1764.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 9.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Sprite", "size": "350ml (lemon)", "totalInvoices": null, "invoiceNo": "9022657147.0", "qtyPet": 12.0, "qty": 588.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 3.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "1000ml", "totalInvoices": 2.0, "invoiceNo": "9022657687.0", "qtyPet": 24.0, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "1000ml", "totalInvoices": null, "invoiceNo": "9022657688.0", "qtyPet": 24.0, "qty": 720.0, "rate": 980.06, "marginPct": 0.104, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 720.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "1000ml", "totalInvoices": 1.0, "invoiceNo": "9022658135.0", "qtyPet": 6.0, "qty": 4032.0, "rate": 753.41, "marginPct": 0.052, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "1500ml", "totalInvoices": 1.0, "invoiceNo": "9022668620.0", "qtyPet": 6.0, "qty": 1320.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022662115.0", "qtyPet": 6.0, "qty": 2640.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Fanta", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022718869.0", "qtyPet": 6.0, "qty": 440.0, "rate": 965.3, "marginPct": 0.0513, "palletRs": 4100.0, "palletQty": 4.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "2000ml", "totalInvoices": 1.0, "invoiceNo": "9022663939.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022666658.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022674786.0", "qtyPet": 6.0, "qty": 480.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 6.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Fanta", "size": "2000ml", "totalInvoices": null, "invoiceNo": "9022716837.0", "qtyPet": 6.0, "qty": 1920.0, "rate": 1083.02, "marginPct": 0.0508, "palletRs": 4100.0, "palletQty": 24.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "350ml", "totalInvoices": 3.0, "invoiceNo": "9022657629.0", "qtyPet": 12.0, "qty": 588.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 3.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "350ml", "totalInvoices": null, "invoiceNo": "9022655276.0", "qtyPet": 12.0, "qty": 392.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 2.0, "mtQty": 0.0}, {"date": "2026-06-25", "month": "June", "product": "Fanta", "size": "350ml", "totalInvoices": null, "invoiceNo": "9022657147.0", "qtyPet": 12.0, "qty": 1764.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 9.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Fanta", "size": "350ml", "totalInvoices": null, "invoiceNo": "9022718868.0", "qtyPet": 12.0, "qty": 784.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 4.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Fanta", "size": "350ml", "totalInvoices": null, "invoiceNo": "9022718868.0", "qtyPet": 12.0, "qty": 784.0, "rate": 784.08, "marginPct": 0.0567, "palletRs": 4100.0, "palletQty": 4.0, "mtQty": 0.0}, {"date": "2026-06-28", "month": "June", "product": "Predator Peach", "size": "250ml", "totalInvoices": 1.0, "invoiceNo": "9022718868.0", "qtyPet": 12.0, "qty": 320.0, "rate": 647.28, "marginPct": 0.0565, "palletRs": 4100.0, "palletQty": 1.0, "mtQty": 0.0}, {"date": "2026-03-10", "month": "March", "product": "Dasani water", "size": "250ml (RGB)", "totalInvoices": null, "invoiceNo": "9022650000.0", "qtyPet": 10.0, "qty": 1000.0, "rate": 500.0, "marginPct": 5.4, "palletRs": 0, "palletQty": 4100.0, "mtQty": 12.0}, {"date": "2026-06-25", "month": "March", "product": "Dasani water", "size": "1500ml", "totalInvoices": 1.0, "invoiceNo": "9022656646.0", "qtyPet": 6.0, "qty": 1200.0, "rate": 451.44, "marginPct": 0.0521, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "March", "product": "Dasani water", "size": "1500ml", "totalInvoices": null, "invoiceNo": "9022703025.0", "qtyPet": 6.0, "qty": 1200.0, "rate": 451.44, "marginPct": 0.0521, "palletRs": 4100.0, "palletQty": 12.0, "mtQty": 0.0}, {"date": "2026-06-27", "month": "March", "product": "Dasani water", "size": "500ml", "totalInvoices": 1.0, "invoiceNo": "9022702286.0", "qtyPet": 12.0, "qty": 720.0, "rate": 534.6, "marginPct": 0.0602, "palletRs": 4100.0, "palletQty": 5.8, "mtQty": 0.0}];
+const STOCK_SEED = [{"date": "2026-07-31", "month": "July", "product": "Coke", "size": "250ml RGB", "previousStock": 160.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 160}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "250ml RGB", "previousStock": 520.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 520}, {"date": "2026-07-31", "month": "July", "product": "Fanta", "size": "250ml RGB", "previousStock": 88.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 88}, {"date": "2026-07-31", "month": "July", "product": "Coke", "size": "250ml RGB", "previousStock": 10.0, "newStock": 720.0, "totalSaleStock": 15.0, "claimStock": 1.0, "totalBalanceStock": 714}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "250ml RGB", "previousStock": 0.0, "newStock": 720.0, "totalSaleStock": 60.0, "claimStock": 1.0, "totalBalanceStock": 659}, {"date": "2026-07-31", "month": "July", "product": "Coke", "size": "250ml RGB", "previousStock": 0.0, "newStock": 720.0, "totalSaleStock": 60.0, "claimStock": 1.0, "totalBalanceStock": 659}, {"date": "2026-07-31", "month": "July", "product": "Coke", "size": "250ml RGB", "previousStock": 10.0, "newStock": 10.0, "totalSaleStock": 80.0, "claimStock": 0.0, "totalBalanceStock": -60}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "1000ml", "previousStock": 29.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 29}, {"date": "2026-07-31", "month": "July", "product": "Dasani Water", "size": "1500ml", "previousStock": 3489.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 3489}, {"date": "2026-07-31", "month": "July", "product": "Coke", "size": "1500ml lemon", "previousStock": 8517.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 8517}, {"date": "2026-07-31", "month": "July", "product": "Fanta", "size": "1500ml lemon", "previousStock": 2257.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 2257}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "2000ml", "previousStock": 5.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 5}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "250ml can slim", "previousStock": 3491.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 3491}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "250ml RGB Mint", "previousStock": 419.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 419}, {"date": "2026-07-31", "month": "July", "product": "Sprite", "size": "350 ml", "previousStock": 87.0, "newStock": 0, "totalSaleStock": 0, "claimStock": 0, "totalBalanceStock": 87}];
+const PURCHASE_RATES = {"Coke|250ml (RGB)": {"rate": 980.06, "marginPct": 0.104}, "Coke|1000ml": {"rate": 753.41, "marginPct": 0.052}, "Coke|1500ml": {"rate": 965.3, "marginPct": 0.0513}, "Coke|250ml (can)": {"rate": 1136.87, "marginPct": 0.0624}, "Coke|2000ml": {"rate": 1083.02, "marginPct": 0.0508}, "Coke|500ml (P-100)": {"rate": 1136.87, "marginPct": 0.0552}, "Coke|350ml": {"rate": 784.08, "marginPct": 0.0567}, "Sprite|250ml (RGB)": {"rate": 980.06, "marginPct": 0.104}, "Sprite|1000ml": {"rate": 753.41, "marginPct": 0.052}, "Sprite|1500ml(lemon)": {"rate": 965.3, "marginPct": 0.0513}, "Sprite|1500ml (Mint)": {"rate": 965.3, "marginPct": 0.0513}, "Sprite|500ml (P-100) Mint": {"rate": 1136.87, "marginPct": 0.0552}, "Sprite|2000ml": {"rate": 1083.02, "marginPct": 0.0508}, "Sprite|500ml(P-100)lemon": {"rate": 1136.87, "marginPct": 0.0552}, "Sprite|350ml (lemon)": {"rate": 784.08, "marginPct": 0.0567}, "Fanta|1000ml": {"rate": 753.41, "marginPct": 0.052}, "Fanta|1500ml": {"rate": 965.3, "marginPct": 0.0513}, "Fanta|2000ml": {"rate": 1083.02, "marginPct": 0.0508}, "Fanta|350ml": {"rate": 784.08, "marginPct": 0.0567}, "Predator Peach|250ml": {"rate": 647.28, "marginPct": 0.0565}, "Dasani water|250ml (RGB)": {"rate": 500.0, "marginPct": 5.4}, "Dasani water|1500ml": {"rate": 451.44, "marginPct": 0.0521}, "Dasani water|500ml": {"rate": 534.6, "marginPct": 0.0602}};
+const PURCHASE_PRODUCT_SIZES = {"Coke": ["250ml (RGB)", "1000ml", "1500ml", "250ml (can)", "2000ml", "500ml (P-100)", "350ml"], "Sprite": ["250ml (RGB)", "1000ml", "1500ml(lemon)", "1500ml (Mint)", "500ml (P-100) Mint", "2000ml", "500ml(P-100)lemon", "350ml (lemon)"], "Fanta": ["1000ml", "1500ml", "2000ml", "350ml"], "Predator Peach": ["250ml"], "Dasani water": ["250ml (RGB)", "1500ml", "500ml"]};
+const PRODUCT_COLORS = {"Coke": "#AD1F2C", "Sprite": "#2E6B4F", "Fanta": "#D9822B", "Pulpy": "#AD7A25", "Predator Peach": "#7a5c8a", "Predator": "#7a5c8a", "Dasani water": "#2E5C8A", "Dasani Water": "#2E5C8A"};
+const STOCK_PRODUCTS = ["Coke", "Sprite", "Fanta", "Pulpy", "Predator", "Dasani Water"];
+const STOCK_SIZES = ["250ml RGB", "1000ml", "1500ml", "1500ml lemon", "1500ml Mint", "2000 lemon", "2000 lemon mint", "2000ml", "250ml can slim", "250ml can Zero", "250ml RGB Mint", "350 ml", "350 ml pomi fanta", "350ml lemon", "350ml lemon mint", "500 ml pomi fanta", "500 P100", "500ml", "500ml P100 L Mint"];
+const MT_RATE = 850.16;
+let charts = {};
+function killChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function fmt(n){ return Number(n||0).toLocaleString('en-PK', {maximumFractionDigits:0}); }
+function fmt2(n){ return Number(n||0).toLocaleString('en-PK', {maximumFractionDigits:2}); }
+function esc(s){ const d=document.createElement('div'); d.textContent = (s==null?'':String(s)); return d.innerHTML; }
+function mondayOf(dateStr){ const d=new Date(dateStr+'T00:00:00'); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setDate(d.getDate()+diff); return d.toISOString().slice(0,10); }
+function addDays(dateStr,n){ const d=new Date(dateStr+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+function yearKey(dateStr){ return dateStr.slice(0,4); }
+
+function lookupMargin(product, size){
+  const key = product + '|' + (size || '');
+  if(RATES[key] !== undefined) return RATES[key];
+  const anySize = Object.keys(RATES).find(k => k.startsWith(product + '|'));
+  if(anySize) return RATES[anySize];
+  return DEFAULT_MARGIN;
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ============ GOOGLE SHEETS STORAGE (via Apps Script Web Apps) ============ */
+const GAS_URLS = {
+  'sales-entries': 'https://script.google.com/macros/s/AKfycbxqOV3kad-ygMnPXDp1rCwnucgDh_aPXnFbRUt3OdXfxNidilNm3Ra1heTh2A14Ovz7/exec',
+  'expense-entries-all': 'https://script.google.com/macros/s/AKfycbwQcQqd_EQ0LrdX2IBGOuIpJUVY0NyNjiuWPnaY7FW3LgWX4ANCvepcq3WBi_EKdtDJ/exec',
+  'purchase-entries': 'https://script.google.com/macros/s/AKfycby3nd5Hylzbxx8wwGTVKq99DX-7PoPDW7PuIJYaaBrctDjxG6L4dKck2mliNtN2nwePgw/exec',
+  'stock-entries': 'https://script.google.com/macros/s/AKfycbz2U7rrL9Z8Q4MGqFY8Q6du1erHFjb5kRCKYiP80iA5LzIMZEWDIxjsv8WighOmCReZ/exec',
+};
+// expense-entries-all stores one JS object (not an array) — wrap/unwrap as a single-element array for the sheet
+function isWrappedObjectKey(key){ return key === 'expense-entries-all'; }
+
+async function storageGet(key, retries){
+  retries = retries===undefined ? 2 : retries;
+  const url = GAS_URLS[key];
+  if(!url){ console.error('No Google Sheet URL configured for key:', key); return null; }
+  for(let i=0;i<=retries;i++){
+    try{
+      const res = await fetch(url, { method:'GET' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const arr = await res.json();
+      if(!Array.isArray(arr) || arr.length===0) return null;
+      return isWrappedObjectKey(key) ? arr[0] : arr;
+    }catch(e){
+      if(i===retries){ console.error('storageGet failed after retries:', key, e); return null; }
+      await sleep(600*(i+1));
+    }
+  }
+}
+async function storageSet(key, value, retries){
+  retries = retries===undefined ? 2 : retries;
+  const url = GAS_URLS[key];
+  if(!url){ console.error('No Google Sheet URL configured for key:', key); return false; }
+  const payload = isWrappedObjectKey(key) ? [value] : value;
+  for(let i=0;i<=retries;i++){
+    try{
+      const res = await fetch(url, {
+        method:'POST',
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+      });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return true;
+    }catch(e){
+      if(i===retries){ console.error('storageSet failed after retries:', key, e); return false; }
+      await sleep(600*(i+1));
+    }
+  }
+}
+async function loadSales(){
+  const existing = await storageGet(SALES_KEY);
+  if(existing) return existing;
+  await storageSet(SALES_KEY, SALES_SEED);
+  return SALES_SEED.slice();
+}
+async function saveSales(entries){ return await storageSet(SALES_KEY, entries); }
+
+function aggregate(entries, keyFn, amountField){
+  const map = {};
+  entries.forEach(e => {
+    const k = keyFn(e.date);
+    if(!map[k]) map[k] = {key:k, qty:0, amount:0, cost:0, profit:0, count:0};
+    map[k].qty += Number(e.qty||0);
+    map[k].amount += Number(e[amountField]||0);
+    map[k].cost += Number(e.cost||0);
+    map[k].profit += Number(e.profit||0);
+    map[k].count += 1;
+  });
+  return Object.values(map).sort((a,b) => a.key < b.key ? -1 : 1);
+}
+
+/* ============ CHARTS ============ */
+const PALETTE = { red:'#AD1F2C', green:'#2E6B4F', greenLight:'rgba(46,107,79,0.16)', gold:'#AD7A25', blue:'#2E5C8A', ink:'#151F28', line:'#ECEDE6' };
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#5B6B76';
+Chart.defaults.font.size = 11.5;
+Chart.defaults.plugins.tooltip.backgroundColor = '#151F28';
+Chart.defaults.plugins.tooltip.titleColor = '#fff';
+Chart.defaults.plugins.tooltip.bodyColor = '#E9EBE5';
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 6;
+Chart.defaults.plugins.tooltip.titleFont = { weight:'700', family:"'Inter', sans-serif" };
+
+function vGradient(canvas, colorTop, colorBottom){
+  const ctx = canvas.getContext('2d');
+  const h = canvas.height || 260;
+  const g = ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0, colorTop); g.addColorStop(1, colorBottom);
+  return g;
+}
+function hexA(hex, alphaHex){ return hex + alphaHex; }
+
+function barLineChart(canvas, labels, saleData, profitData, saleLabel, colorHex){
+  colorHex = colorHex || PALETTE.red;
+  const barGrad = vGradient(canvas, hexA(colorHex,'E6'), hexA(colorHex,'35'));
+  const areaGrad = vGradient(canvas, PALETTE.greenLight, 'rgba(46,107,79,0.01)');
+  return new Chart(canvas, {
+    data: { labels, datasets: [
+        { type:'bar', label:saleLabel||'Sale (Rs)', data:saleData, backgroundColor:barGrad, borderRadius:7, borderSkipped:false,
+          barPercentage:0.55, categoryPercentage:0.7, order:2, yAxisID:'y' },
+        { type:'line', label:'Profit (Rs)', data:profitData, borderColor:PALETTE.green, backgroundColor:areaGrad, fill:true,
+          tension:.35, order:1, yAxisID:'y1', pointRadius:3.5, pointHoverRadius:6, pointBackgroundColor:'#fff',
+          pointBorderColor:PALETTE.green, pointBorderWidth:2, borderWidth:2.5 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', align:'end', labels:{ boxWidth:10, usePointStyle:true, padding:14 } } },
+      scales:{ y:{ grid:{ color:PALETTE.line, drawTicks:false }, border:{display:false}, ticks:{ callback:v=>fmt(v) } },
+        y1:{ position:'right', grid:{ display:false }, border:{display:false}, ticks:{ callback:v=>fmt(v) } },
+        x:{ grid:{ display:false }, border:{display:false} } } }
+  });
+}
+function simpleBar(canvas, labels, data, colorHex){
+  const grad = vGradient(canvas, hexA(colorHex,'E6'), hexA(colorHex,'30'));
+  return new Chart(canvas, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'Amount (Rs)', data, backgroundColor:grad, borderRadius:7, borderSkipped:false, barPercentage:0.6, categoryPercentage:0.7,
+      hoverBackgroundColor:colorHex }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ grid:{color:PALETTE.line, drawTicks:false}, border:{display:false}, ticks:{callback:v=>fmt(v)} }, x:{ grid:{display:false}, border:{display:false} } } }
+  });
+}
+function mixDoughnut(canvas, labels, data, colors){
+  colors = colors || ['#AD1F2C','#2E6B4F','#AD7A25','#2E5C8A','#8AA6A0','#C9A66B','#6b4f2e','#7a5c8a','#4a7a9e','#a3874a','#5c8a6b','#9e4a5c','#3f7a72'];
+  return new Chart(canvas, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor:colors, borderWidth:2, borderColor:'#fff', hoverOffset:8 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ position:'right', labels:{boxWidth:10, font:{size:10.3}, padding:9} } } }
+  });
+}
+
+/* ============ PURCHASING: PRODUCTS MODULE ============ */
+const PURCHASE_KEY = 'purchase-entries';
+const STOCK_KEY = 'stock-entries';
+
+async function loadPurchase(){
+  const existing = await storageGet(PURCHASE_KEY);
+  if(existing) return existing;
+  await storageSet(PURCHASE_KEY, PURCHASE_SEED);
+  return PURCHASE_SEED.slice();
+}
+async function savePurchase(entries){ return await storageSet(PURCHASE_KEY, entries); }
+async function loadStock(){
+  const existing = await storageGet(STOCK_KEY);
+  if(existing) return existing;
+  await storageSet(STOCK_KEY, STOCK_SEED);
+  return STOCK_SEED.slice();
+}
+async function saveStock(entries){ return await storageSet(STOCK_KEY, entries); }
+
+function computePurchase(f){
+  // f: {product,size,qtyPet,qty,rate,marginPct,palletRs,palletQty,mtQty}
+  const qty = Number(f.qty)||0, rate = Number(f.rate)||0, marginPct = Number(f.marginPct)||0;
+  const qtyPet = Number(f.qtyPet)||0;
+  const palletRs = Number(f.palletRs)||0, palletQty = Number(f.palletQty)||0, mtQty = Number(f.mtQty)||0;
+
+  const netItem = qtyPet * qty;
+  const netPurchaseAmount = qty * rate;
+  const marginAmount = marginPct * rate;
+  const netDiscount = marginAmount * qty;
+  const afterDiscountPerPet = rate - marginAmount;
+  const advTax = netPurchaseAmount * 0.001;
+  const palletTotal = palletRs * palletQty;
+  const totalWithoutPallets = netPurchaseAmount - netDiscount + advTax;
+  const mtValue = mtQty * MT_RATE;
+  const netPurchaseFinal = totalWithoutPallets + palletTotal + mtValue;
+
+  return { netItem, netPurchaseAmount, marginAmount, netDiscount, afterDiscountPerPet,
+    advTax, palletTotal, totalWithoutPallets, mtValue, netPurchaseFinal };
+}
+
+function buildPurchasingDOM(){
+  const subtabsEl = document.getElementById('purchasing-subtabs');
+  const panelsEl = document.getElementById('purchasing-panels');
+
+  const productOptions = Object.keys(PURCHASE_PRODUCT_SIZES).map(p =>
+    '<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
+
+  panelsEl.innerHTML = `
+    <div class="subpanel active" id="pur-sub-entryform">
+      <div class="panel form-wrap accent" style="--accent:#AD1F2C">
+        <div class="panel-head"><h2>New Purchase Entry</h2><span class="hint">Product → Size auto-fills rate &amp; margin</span></div>
+        <div class="panel-body">
+          <form id="purchase-form">
+            <div class="form-grid">
+              <div class="field"><label>Date</label><input type="date" id="p-date" required></div>
+              <div class="field"><label>Month</label><input type="text" id="p-month" placeholder="e.g. September"></div>
+              <div class="field"><label>Product</label><select id="p-product" required><option value="">Select</option>${productOptions}</select></div>
+              <div class="field"><label>Sample Size</label><select id="p-size" required><option value="">Select product first</option></select></div>
+              <div class="field"><label>Total No of Invoices</label><input type="number" step="any" id="p-totinv"></div>
+              <div class="field"><label>Invoice No</label><input type="text" id="p-invoice"></div>
+              <div class="field"><label>Quantity / Pet</label><input type="number" step="any" id="p-qtypet"></div>
+              <div class="field"><label>Quantity</label><input type="number" step="any" id="p-qty" required></div>
+              <div class="field"><label>Purchase Rate (Rs)</label><input type="number" step="any" id="p-rate" required></div>
+              <div class="field"><label>Margin %</label><input type="number" step="any" id="p-margin" placeholder="e.g. 0.052"></div>
+              <div class="field"><label>Comp Pallet Wood Rs.</label><input type="number" step="any" id="p-palletrs" value="4100"></div>
+              <div class="field"><label>Comp Pallet Wood Qty.</label><input type="number" step="any" id="p-palletqty"></div>
+              <div class="field"><label>MT Qty</label><input type="number" step="any" id="p-mtqty"></div>
+            </div>
+            <div class="panel" style="margin:18px 0 0 0; background:#F7F7F4;">
+              <div class="panel-body" style="padding:14px 18px;" id="p-live-calc">
+                <span class="hint">Live calculation — fill Quantity, Rate and Margin % to preview</span>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary" style="--accent:#AD1F2C">Save Purchase Entry</button>
+              <span class="form-msg" id="purchase-msg"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="pur-sub-entries">
+      <div class="panel"><div class="panel-head"><h2>Purchase by product</h2></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-pur-mix"></canvas></div></div></div>
+      <div class="panel">
+        <div class="panel-head"><h2>All Purchase Entries</h2><span class="hint" id="purchase-count">0 entries</span></div>
+        <div class="panel-body table-scroll">
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Product</th><th>Size</th><th class="num">Qty/Pet</th><th class="num">Qty</th>
+              <th class="num">Net Item</th><th class="num">Rate</th><th class="num">Net Purchase</th><th class="num">Margin %</th>
+              <th class="num">Margin Amt</th><th class="num">Net Discount</th><th class="num">Adv Tax</th>
+              <th class="num">Pallet Total</th><th class="num">MT Value</th><th class="num">Final Net Amount</th><th></th>
+            </tr></thead>
+            <tbody id="purchase-rows"></tbody>
+            <tfoot><tr><td colspan="14">TOTAL</td><td class="num" id="purchase-tot">0</td><td></td></tr></tfoot>
+          </table>
+          <div class="empty-state" id="purchase-empty" style="display:none;">No entries yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="pur-sub-stockentry">
+      <div class="panel form-wrap accent" style="--accent:#2E5C8A">
+        <div class="panel-head"><h2>New Stock Movement Entry</h2><span class="hint">Balance auto-calculates</span></div>
+        <div class="panel-body">
+          <form id="stock-form">
+            <div class="form-grid">
+              <div class="field"><label>Date</label><input type="date" id="st-date" required></div>
+              <div class="field"><label>Month</label><input type="text" id="st-month" placeholder="e.g. September"></div>
+              <div class="field"><label>Product</label>
+                <select id="st-product" required><option value="">Select</option>${STOCK_PRODUCTS.map(p=>'<option>'+esc(p)+'</option>').join('')}</select></div>
+              <div class="field"><label>Size</label>
+                <select id="st-size" required><option value="">Select</option>${STOCK_SIZES.map(s=>'<option>'+esc(s)+'</option>').join('')}</select></div>
+              <div class="field"><label>Previous Stock</label><input type="number" step="any" id="st-prev" value="0"></div>
+              <div class="field"><label>New Stock (received)</label><input type="number" step="any" id="st-new" value="0"></div>
+              <div class="field"><label>Total Sale Stock</label><input type="number" step="any" id="st-sale" value="0"></div>
+              <div class="field"><label>Claim Stock</label><input type="number" step="any" id="st-claim" value="0"></div>
+            </div>
+            <div class="panel" style="margin:18px 0 0 0; background:#F7F7F4;">
+              <div class="panel-body" style="padding:14px 18px;" id="st-live-calc"><span class="hint">Total Balance Stock = Previous + New − Sale − Claim</span></div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary" style="--accent:#2E5C8A">Save Stock Entry</button>
+              <span class="form-msg" id="stock-msg"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="pur-sub-stock">
+      <div class="panel"><div class="panel-head"><h2>Current stock by product</h2></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-stock-mix"></canvas></div></div></div>
+      <div class="panel">
+        <div class="panel-head"><h2>Stock Monitoring — All Entries</h2><span class="hint" id="stock-count">0 entries</span></div>
+        <div class="panel-body table-scroll">
+          <table>
+            <thead><tr><th>Date</th><th>Product</th><th>Size</th><th class="num">Previous</th><th class="num">New</th>
+              <th class="num">Sale</th><th class="num">Claim</th><th class="num">Balance</th><th></th></tr></thead>
+            <tbody id="stock-rows"></tbody>
+          </table>
+          <div class="empty-state" id="stock-empty" style="display:none;">No entries yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="subpanel" id="pur-sub-overall">
+      <div class="stat-row" id="pur-overall-stats"></div>
+      <div class="grid-2">
+        <div class="panel accent" style="--accent:#151F28"><div class="panel-head"><h2>Purchase amount by product</h2></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-pur-overall-cats"></canvas></div></div></div>
+        <div class="panel accent" style="--accent:#151F28"><div class="panel-head"><h2>Current stock balance by product</h2></div>
+          <div class="panel-body"><div class="chart-box"><canvas id="chart-pur-overall-stock"></canvas></div></div></div>
+      </div>
+      <div class="panel"><div class="panel-head"><h2>Latest stock snapshot</h2><span class="hint">Most recent balance per product / size</span></div>
+        <div class="panel-body table-scroll">
+          <table><thead><tr><th>Product</th><th>Size</th><th>Date</th><th class="num">Balance Stock</th></tr></thead>
+          <tbody id="pur-overall-snapshot"></tbody></table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // subtabs behavior
+  document.querySelectorAll('#purchasing-subtabs .subtab').forEach(item => {
+    const colorMap = { entryform:'#AD1F2C', entries:'#AD1F2C', stockentry:'#2E5C8A', stock:'#2E5C8A', overall:'#151F28' };
+    item.addEventListener('click', () => {
+      document.querySelectorAll('#purchasing-subtabs .subtab').forEach(i => { i.classList.remove('active'); i.style.background=''; });
+      document.querySelectorAll('#purchasing-panels .subpanel').forEach(s => s.classList.remove('active'));
+      item.classList.add('active'); item.style.background = colorMap[item.dataset.sub] || '#AD1F2C';
+      document.getElementById('pur-sub-' + item.dataset.sub).classList.add('active');
+    });
+  });
+
+  // cascading product -> size dropdown for purchase form
+  document.getElementById('p-product').addEventListener('change', (e) => {
+    const prod = e.target.value;
+    const sizeSel = document.getElementById('p-size');
+    const sizes = PURCHASE_PRODUCT_SIZES[prod] || [];
+    sizeSel.innerHTML = '<option value="">Select</option>' + sizes.map(s=>'<option>'+esc(s)+'</option>').join('');
+  });
+  document.getElementById('p-size').addEventListener('change', (e) => {
+    const prod = document.getElementById('p-product').value;
+    const size = e.target.value;
+    const key = prod + '|' + size;
+    const rateInfo = PURCHASE_RATES[key];
+    if(rateInfo){
+      document.getElementById('p-rate').value = rateInfo.rate;
+      document.getElementById('p-margin').value = rateInfo.marginPct;
+    }
+    updatePurchaseLiveCalc();
+  });
+  ['p-qtypet','p-qty','p-rate','p-margin','p-palletrs','p-palletqty','p-mtqty'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePurchaseLiveCalc);
+  });
+
+  function updatePurchaseLiveCalc(){
+    const f = {
+      qtyPet: document.getElementById('p-qtypet').value, qty: document.getElementById('p-qty').value,
+      rate: document.getElementById('p-rate').value, marginPct: document.getElementById('p-margin').value,
+      palletRs: document.getElementById('p-palletrs').value, palletQty: document.getElementById('p-palletqty').value,
+      mtQty: document.getElementById('p-mtqty').value
+    };
+    const c = computePurchase(f);
+    document.getElementById('p-live-calc').innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; font-size:12.5px;">
+        <div><span class="hint">Net Item</span><br><b>${fmt2(c.netItem)}</b></div>
+        <div><span class="hint">Net Purchase Amt</span><br><b>${fmt2(c.netPurchaseAmount)}</b></div>
+        <div><span class="hint">Margin Amt/unit</span><br><b>${fmt2(c.marginAmount)}</b></div>
+        <div><span class="hint">Net Discount</span><br><b>${fmt2(c.netDiscount)}</b></div>
+        <div><span class="hint">Adv Tax (0.10%)</span><br><b>${fmt2(c.advTax)}</b></div>
+        <div><span class="hint">Pallet Total</span><br><b>${fmt2(c.palletTotal)}</b></div>
+        <div><span class="hint">MT Value</span><br><b>${fmt2(c.mtValue)}</b></div>
+        <div style="grid-column:span 2;"><span class="hint">FINAL NET PURCHASE AMOUNT</span><br><b style="font-size:16px; color:#AD1F2C;">${fmt2(c.netPurchaseFinal)}</b></div>
+      </div>`;
+  }
+
+  function updateStockLiveCalc(){
+    const prev = parseFloat(document.getElementById('st-prev').value)||0;
+    const nw = parseFloat(document.getElementById('st-new').value)||0;
+    const sale = parseFloat(document.getElementById('st-sale').value)||0;
+    const claim = parseFloat(document.getElementById('st-claim').value)||0;
+    const balance = prev + nw - sale - claim;
+    document.getElementById('st-live-calc').innerHTML =
+      '<span class="hint">Total Balance Stock</span><br><b style="font-size:16px; color:#2E5C8A;">'+fmt2(balance)+'</b>';
+  }
+  ['st-prev','st-new','st-sale','st-claim'].forEach(id => document.getElementById(id).addEventListener('input', updateStockLiveCalc));
+  updateStockLiveCalc();
+
+  document.getElementById('purchase-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msgEl = document.getElementById('purchase-msg');
+    const f = {
+      product: document.getElementById('p-product').value, size: document.getElementById('p-size').value,
+      qtyPet: parseFloat(document.getElementById('p-qtypet').value)||0, qty: parseFloat(document.getElementById('p-qty').value)||0,
+      rate: parseFloat(document.getElementById('p-rate').value)||0, marginPct: parseFloat(document.getElementById('p-margin').value)||0,
+      palletRs: parseFloat(document.getElementById('p-palletrs').value)||0, palletQty: parseFloat(document.getElementById('p-palletqty').value)||0,
+      mtQty: parseFloat(document.getElementById('p-mtqty').value)||0
+    };
+    const c = computePurchase(f);
+    const entry = {
+      date: document.getElementById('p-date').value, month: document.getElementById('p-month').value,
+      product: f.product, size: f.size,
+      totalInvoices: parseFloat(document.getElementById('p-totinv').value)||null,
+      invoiceNo: document.getElementById('p-invoice').value,
+      qtyPet: f.qtyPet, qty: f.qty, rate: f.rate, marginPct: f.marginPct,
+      palletRs: f.palletRs, palletQty: f.palletQty, mtQty: f.mtQty,
+      netItem: c.netItem, netPurchaseAmount: c.netPurchaseAmount, marginAmount: c.marginAmount,
+      netDiscount: c.netDiscount, afterDiscountPerPet: c.afterDiscountPerPet, advTax: c.advTax,
+      palletTotal: c.palletTotal, totalWithoutPallets: c.totalWithoutPallets, mtValue: c.mtValue,
+      netPurchaseFinal: c.netPurchaseFinal
+    };
+    const entries = await loadPurchase();
+    entries.push(entry);
+    const ok = await savePurchase(entries);
+    msgEl.className = 'form-msg ' + (ok?'ok':'err');
+    msgEl.textContent = ok ? 'Saved — '+entries.length+' total entries.' : 'Could not save. Reload the page and try again.';
+    if(ok){ document.getElementById('purchase-form').reset(); document.getElementById('p-size').innerHTML='<option value="">Select product first</option>'; updatePurchaseLiveCalc(); }
+    setTimeout(()=>{ msgEl.textContent=''; }, 4000);
+    await refreshEverything();
+  });
+
+  document.getElementById('stock-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const msgEl = document.getElementById('stock-msg');
+    const prev = parseFloat(document.getElementById('st-prev').value)||0;
+    const nw = parseFloat(document.getElementById('st-new').value)||0;
+    const sale = parseFloat(document.getElementById('st-sale').value)||0;
+    const claim = parseFloat(document.getElementById('st-claim').value)||0;
+    const entry = {
+      date: document.getElementById('st-date').value, month: document.getElementById('st-month').value,
+      product: document.getElementById('st-product').value, size: document.getElementById('st-size').value,
+      previousStock: prev, newStock: nw, totalSaleStock: sale, claimStock: claim,
+      totalBalanceStock: prev + nw - sale - claim
+    };
+    const entries = await loadStock();
+    entries.push(entry);
+    const ok = await saveStock(entries);
+    msgEl.className = 'form-msg ' + (ok?'ok':'err');
+    msgEl.textContent = ok ? 'Saved — '+entries.length+' total entries.' : 'Could not save. Reload the page and try again.';
+    if(ok){ document.getElementById('stock-form').reset(); updateStockLiveCalc(); }
+    setTimeout(()=>{ msgEl.textContent=''; }, 4000);
+    await refreshEverything();
+  });
+}
+
+function productColor(p){ return PRODUCT_COLORS[p] || '#5B6B76'; }
+
+async function renderPurchaseAll(){
+  const entries = await loadPurchase();
+  const rowsEl = document.getElementById('purchase-rows');
+  const emptyEl = document.getElementById('purchase-empty');
+  document.getElementById('purchase-count').textContent = entries.length + ' entries';
+  let tot = 0; entries.forEach(e => tot += Number(e.netPurchaseFinal||0));
+  document.getElementById('purchase-tot').textContent = fmt2(tot);
+  if(entries.length===0){ rowsEl.innerHTML=''; emptyEl.style.display='block'; }
+  else {
+    emptyEl.style.display='none';
+    rowsEl.innerHTML = entries.slice().reverse().map((e,idx) => {
+      const realIdx = entries.length-1-idx;
+      const color = productColor(e.product);
+      return '<tr style="border-left:3px solid '+color+';"><td><span class="cat-swatch"><span class="sw" style="background:'+color+'"></span>'+esc(e.date)+'</span></td>'+
+        '<td>'+esc(e.product)+'</td><td>'+esc(e.size)+'</td><td class="num">'+fmt2(e.qtyPet)+'</td><td class="num">'+fmt2(e.qty)+'</td>'+
+        '<td class="num">'+fmt2(e.netItem)+'</td><td class="num">'+fmt2(e.rate)+'</td><td class="num">'+fmt2(e.netPurchaseAmount)+'</td>'+
+        '<td class="num">'+((e.marginPct||0)*100).toFixed(2)+'%</td><td class="num">'+fmt2(e.marginAmount)+'</td>'+
+        '<td class="num">'+fmt2(e.netDiscount)+'</td><td class="num">'+fmt2(e.advTax)+'</td><td class="num">'+fmt2(e.palletTotal)+'</td>'+
+        '<td class="num">'+fmt2(e.mtValue)+'</td><td class="num" style="font-weight:700;">'+fmt2(e.netPurchaseFinal)+'</td>'+
+        '<td><button class="del-btn" data-idx="'+realIdx+'">Delete</button></td></tr>';
+    }).join('');
+    rowsEl.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const all = await loadPurchase();
+        all.splice(parseInt(btn.dataset.idx),1);
+        await savePurchase(all);
+        await refreshEverything();
+      });
+    });
+  }
+
+  const mixMap = {};
+  entries.forEach(e => { mixMap[e.product] = (mixMap[e.product]||0) + Number(e.netPurchaseFinal||0); });
+  killChart('pur-mix');
+  charts['pur-mix'] = mixDoughnut(document.getElementById('chart-pur-mix'), Object.keys(mixMap), Object.values(mixMap), Object.keys(mixMap).map(productColor));
+
+  return entries;
+}
+
+async function renderStockAll(){
+  const entries = await loadStock();
+  const rowsEl = document.getElementById('stock-rows');
+  const emptyEl = document.getElementById('stock-empty');
+  document.getElementById('stock-count').textContent = entries.length + ' entries';
+  if(entries.length===0){ rowsEl.innerHTML=''; emptyEl.style.display='block'; }
+  else {
+    emptyEl.style.display='none';
+    rowsEl.innerHTML = entries.slice().reverse().map((e,idx) => {
+      const realIdx = entries.length-1-idx;
+      const color = productColor(e.product);
+      return '<tr style="border-left:3px solid '+color+';"><td>'+esc(e.date)+'</td>'+
+        '<td><span class="cat-swatch"><span class="sw" style="background:'+color+'"></span>'+esc(e.product)+'</span></td><td>'+esc(e.size)+'</td>'+
+        '<td class="num">'+fmt2(e.previousStock)+'</td><td class="num">'+fmt2(e.newStock)+'</td><td class="num">'+fmt2(e.totalSaleStock)+'</td>'+
+        '<td class="num">'+fmt2(e.claimStock)+'</td><td class="num" style="font-weight:700;">'+fmt2(e.totalBalanceStock)+'</td>'+
+        '<td><button class="del-btn" data-idx="'+realIdx+'">Delete</button></td></tr>';
+    }).join('');
+    rowsEl.querySelectorAll('.del-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const all = await loadStock();
+        all.splice(parseInt(btn.dataset.idx),1);
+        await saveStock(all);
+        await refreshEverything();
+      });
+    });
+  }
+
+  const stockMixMap = {};
+  entries.forEach(e => { stockMixMap[e.product] = (stockMixMap[e.product]||0) + Number(e.totalBalanceStock||0); });
+  killChart('stock-mix');
+  charts['stock-mix'] = mixDoughnut(document.getElementById('chart-stock-mix'), Object.keys(stockMixMap), Object.values(stockMixMap), Object.keys(stockMixMap).map(productColor));
+
+  return entries;
+}
+
+function renderPurchasingOverall(purchaseEntries, stockEntries){
+  const totalPurchase = purchaseEntries.reduce((s,e)=>s+Number(e.netPurchaseFinal||0),0);
+  const totalQty = purchaseEntries.reduce((s,e)=>s+Number(e.qty||0),0);
+  const totalStockBalance = {};
+  // latest balance per product+size (last entry wins)
+  const latest = {};
+  stockEntries.forEach(e => { latest[e.product+'|'+e.size] = e; });
+  Object.values(latest).forEach(e => { totalStockBalance[e.product] = (totalStockBalance[e.product]||0) + Number(e.totalBalanceStock||0); });
+
+  document.getElementById('pur-overall-stats').innerHTML = `
+    <div class="stat c-red"><div class="label">Total Purchase Amount (Rs)</div><div class="value">${fmt(totalPurchase)}</div><div class="sub">${purchaseEntries.length} entries</div></div>
+    <div class="stat"><div class="label">Total Quantity Purchased</div><div class="value">${fmt(totalQty)}</div></div>
+    <div class="stat c-blue"><div class="label">Stock Entries Logged</div><div class="value">${stockEntries.length}</div></div>
+  `;
+
+  const catTotals = {};
+  purchaseEntries.forEach(e => { catTotals[e.product] = (catTotals[e.product]||0) + Number(e.netPurchaseFinal||0); });
+  killChart('pur-overall-cats');
+  charts['pur-overall-cats'] = new Chart(document.getElementById('chart-pur-overall-cats'), {
+    type:'bar',
+    data:{ labels:Object.keys(catTotals), datasets:[{ data:Object.values(catTotals), backgroundColor:Object.keys(catTotals).map(productColor), borderRadius:6, borderSkipped:false }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{color:PALETTE.line, drawTicks:false}, border:{display:false}, ticks:{callback:v=>fmt(v)} }, y:{ grid:{display:false}, border:{display:false} } } }
+  });
+
+  killChart('pur-overall-stock');
+  charts['pur-overall-stock'] = new Chart(document.getElementById('chart-pur-overall-stock'), {
+    type:'bar',
+    data:{ labels:Object.keys(totalStockBalance), datasets:[{ data:Object.values(totalStockBalance), backgroundColor:Object.keys(totalStockBalance).map(productColor), borderRadius:6, borderSkipped:false }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{color:PALETTE.line, drawTicks:false}, border:{display:false}, ticks:{callback:v=>fmt(v)} }, y:{ grid:{display:false}, border:{display:false} } } }
+  });
+
+  const snapEl = document.getElementById('pur-overall-snapshot');
+  const rows = Object.values(latest).sort((a,b)=> a.product.localeCompare(b.product) || a.size.localeCompare(b.size));
+  snapEl.innerHTML = rows.map(e => {
+    const color = productColor(e.product);
+    return '<tr style="border-left:3px solid '+color+';"><td><span class="cat-swatch"><span class="sw" style="background:'+color+'"></span>'+esc(e.product)+'</span></td>'+
+      '<td>'+esc(e.size)+'</td><td>'+esc(e.date)+'</td><td class="num" style="font-weight:700;">'+fmt2(e.totalBalanceStock)+'</td></tr>';
+  }).join('') || '<tr><td colspan="4" style="text-align:center; color:#5B6B76;">No stock entries yet.</td></tr>';
+}
+
+async function renderPurchasingAll(){
+  const purchaseEntries = await renderPurchaseAll();
+  const stockEntries = await renderStockAll();
+  renderPurchasingOverall(purchaseEntries, stockEntries);
+  return { purchaseEntries, stockEntries };
+}
+
+
+/* ============ SALES MODULE ============ */
+async function renderSalesAll(){
+  const entries = await loadSales();
+  renderSalesTable(entries);
+  renderSalesDaily(entries);
+  renderSalesWeekly(entries);
+  renderSalesMonthly(entries);
+  renderSalesYearly(entries);
+  return entries;
+}
+function renderSalesTable(entries){
+  const rowsEl = document.getElementById('sales-rows');
+  const emptyEl = document.getElementById('sales-empty');
+  document.getElementById('sales-count').textContent = entries.length + ' entries';
+  let totAmount=0, totCost=0, totProfit=0;
+  entries.forEach(e => { totAmount+=Number(e.amount||0); totCost+=Number(e.cost||0); totProfit+=Number(e.profit||0); });
+  document.getElementById('tot-amount').textContent = fmt2(totAmount);
+  document.getElementById('tot-cost').textContent = fmt2(totCost);
+  document.getElementById('tot-profit').textContent = fmt2(totProfit);
+  if(entries.length === 0){ rowsEl.innerHTML=''; emptyEl.style.display='block'; return; }
+  emptyEl.style.display = 'none';
+  rowsEl.innerHTML = entries.slice().reverse().map((e, idx) => {
+    const realIdx = entries.length - 1 - idx;
+    const profitClass = e.profit >= 0 ? 'profit-pos' : 'profit-neg';
+    return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.route)+'</td><td>'+esc(e.delman)+'</td><td>'+esc(e.invoice)+'</td>'+
+      '<td>'+esc(e.customer)+'</td><td>'+esc(e.product)+'</td><td>'+esc(e.size)+'</td>'+
+      '<td class="num">'+fmt2(e.qty)+'</td><td class="num">'+fmt2(e.amount)+'</td>'+
+      '<td class="num">'+(e.marginPct*100).toFixed(2)+'%</td><td class="num">'+fmt2(e.cost)+'</td>'+
+      '<td class="num '+profitClass+'">'+fmt2(e.profit)+'</td><td>'+esc(e.notes)+'</td>'+
+      '<td><button class="del-btn" data-idx="'+realIdx+'">Delete</button></td></tr>';
+  }).join('');
+  rowsEl.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const all = await loadSales();
+      all.splice(parseInt(btn.dataset.idx), 1);
+      await saveSales(all);
+      await refreshEverything();
+    });
+  });
+}
+function summaryRowsHtml(rows, labelFn){
+  return rows.map(r => {
+    const pct = r.amount ? (r.profit/r.amount*100).toFixed(2)+'%' : '';
+    return '<tr><td>'+labelFn(r)+'</td><td class="num">'+fmt2(r.qty)+'</td><td class="num">'+fmt2(r.amount)+'</td>'+
+      '<td class="num">'+fmt2(r.cost)+'</td><td class="num">'+fmt2(r.profit)+'</td><td class="num">'+pct+'</td></tr>';
+  }).join('');
+}
+function renderSalesDaily(entries){
+  const rows = aggregate(entries, d=>d, 'amount');
+  document.getElementById('daily-rows').innerHTML = summaryRowsHtml(rows, r=>r.key);
+  document.getElementById('daily-empty').style.display = rows.length ? 'none' : 'block';
+  killChart('daily');
+  charts['daily'] = barLineChart(document.getElementById('chart-daily'), rows.map(r=>r.key), rows.map(r=>r.amount), rows.map(r=>r.profit), 'Sale (Rs)', PALETTE.red);
+}
+function renderSalesWeekly(entries){
+  const rows = aggregate(entries, d=>mondayOf(d), 'amount');
+  document.getElementById('weekly-rows').innerHTML = rows.map(r => {
+    const end = addDays(r.key,6);
+    const pct = r.amount ? (r.profit/r.amount*100).toFixed(2)+'%' : '';
+    return '<tr><td>'+r.key+'</td><td>'+end+'</td><td class="num">'+fmt2(r.qty)+'</td><td class="num">'+fmt2(r.amount)+'</td>'+
+      '<td class="num">'+fmt2(r.cost)+'</td><td class="num">'+fmt2(r.profit)+'</td><td class="num">'+pct+'</td></tr>';
+  }).join('');
+  document.getElementById('weekly-empty').style.display = rows.length ? 'none' : 'block';
+  killChart('weekly');
+  charts['weekly'] = barLineChart(document.getElementById('chart-weekly'), rows.map(r=>r.key), rows.map(r=>r.amount), rows.map(r=>r.profit), 'Sale (Rs)', PALETTE.gold);
+}
+function renderSalesMonthly(entries){
+  const rows = aggregate(entries, d=>monthKey(d), 'amount');
+  document.getElementById('monthly-rows').innerHTML = summaryRowsHtml(rows, r=>r.key);
+  document.getElementById('monthly-empty').style.display = rows.length ? 'none' : 'block';
+  killChart('monthly');
+  charts['monthly'] = barLineChart(document.getElementById('chart-monthly'), rows.map(r=>r.key), rows.map(r=>r.amount), rows.map(r=>r.profit), 'Sale (Rs)', PALETTE.blue);
+}
+function renderSalesYearly(entries){
+  const rows = aggregate(entries, d=>yearKey(d), 'amount');
+  document.getElementById('yearly-rows').innerHTML = summaryRowsHtml(rows, r=>r.key);
+  document.getElementById('yearly-empty').style.display = rows.length ? 'none' : 'block';
+  killChart('yearly');
+  charts['yearly'] = barLineChart(document.getElementById('chart-yearly'), rows.map(r=>r.key), rows.map(r=>r.amount), rows.map(r=>r.profit), 'Sale (Rs)', PALETTE.green);
+}
+document.getElementById('sales-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const msgEl = document.getElementById('sales-msg');
+  const product = document.getElementById('s-product').value;
+  const size = document.getElementById('s-size').value;
+  const amount = parseFloat(document.getElementById('s-amount').value) || 0;
+  const marginPct = lookupMargin(product, size);
+  const cost = amount * (1 - marginPct);
+  const profit = amount - cost;
+  const entry = {
+    date: document.getElementById('s-date').value, route: document.getElementById('s-route').value,
+    delman: document.getElementById('s-delman').value, invoice: document.getElementById('s-invoice').value,
+    customer: document.getElementById('s-customer').value, product, size,
+    qty: parseFloat(document.getElementById('s-qty').value) || 0,
+    amount, marginPct, cost, profit, notes: document.getElementById('s-notes').value,
+  };
+  const entries = await loadSales();
+  entries.push(entry);
+  const ok = await saveSales(entries);
+  msgEl.className = 'form-msg ' + (ok ? 'ok' : 'err');
+  msgEl.textContent = ok ? 'Saved — ' + entries.length + ' total entries.' : 'Could not save. Reload the page and try again.';
+  if(ok){ document.getElementById('sales-form').reset(); }
+  setTimeout(() => { msgEl.textContent=''; }, 4000);
+  await refreshEverything();
+});
+
+/* ============ EXPENSE: PER-CATEGORY GENERIC MODULE ============ */
+/* Consolidated into ONE storage key (instead of 12) to cut down on storage calls */
+const EXPENSE_KEY = 'expense-entries-all';
+let _expenseCache = null;
+async function loadExpenseAll(force){
+  if(_expenseCache && !force) return _expenseCache;
+  const existing = await storageGet(EXPENSE_KEY);
+  if(existing){ _expenseCache = existing; return existing; }
+  const seeded = {};
+  CATEGORY_CONFIGS.forEach(c => { seeded[c.key] = c.seed; });
+  const ok = await storageSet(EXPENSE_KEY, seeded);
+  _expenseCache = seeded;
+  return seeded;
+}
+async function saveExpenseAll(obj){
+  const ok = await storageSet(EXPENSE_KEY, obj);
+  if(ok) _expenseCache = obj;
+  return ok;
+}
+async function loadCategory(cfg){
+  const all = await loadExpenseAll();
+  return all[cfg.key] ? all[cfg.key].slice() : cfg.seed.slice();
+}
+async function saveCategory(cfg, entries){
+  const all = await loadExpenseAll();
+  all[cfg.key] = entries;
+  return await saveExpenseAll(all);
+}
+
+function buildExpenseDOM(){
+  const subtabsEl = document.getElementById('expense-subtabs');
+  const panelsEl = document.getElementById('expense-panels');
+
+  CATEGORY_CONFIGS.forEach((cfg, i) => {
+    const st = document.createElement('div');
+    st.className = 'subtab' + (i===0 ? ' active' : '');
+    st.dataset.sub = cfg.key;
+    st.innerHTML = '<span class="dot" style="background:'+cfg.color+'"></span>' + esc(cfg.label);
+    st.addEventListener('click', () => {
+      document.querySelectorAll('#expense-subtabs .subtab').forEach(x=>{ x.classList.remove('active'); x.style.background=''; });
+      document.querySelectorAll('#expense-panels .subpanel').forEach(x=>x.classList.remove('active'));
+      st.classList.add('active'); st.style.background = cfg.color;
+      document.getElementById('exp-panel-'+cfg.key).classList.add('active');
+    });
+    if(i===0) st.style.background = cfg.color;
+    subtabsEl.appendChild(st);
+
+    const panel = document.createElement('div');
+    panel.className = 'subpanel' + (i===0 ? ' active' : '');
+    panel.id = 'exp-panel-' + cfg.key;
+
+    const fieldInputs = cfg.fields.map(f =>
+      '<div class="field"><label>'+esc(f.label)+'</label><input type="'+(f.type==='number'?'number':'text')+'" '+(f.type==='number'?'step="any"':'')+' id="ef-'+cfg.key+'-'+f.id+'"></div>'
+    ).join('');
+    const amountField = cfg.computed ? '' :
+      '<div class="field"><label>'+esc(cfg.amountLabel)+'</label><input type="number" step="any" id="ef-'+cfg.key+'-amount" required></div>';
+    const notesField = '<div class="field"><label>Notes</label><input type="text" id="ef-'+cfg.key+'-notes"></div>';
+
+    const tableCols = cfg.fields.map(f => '<th>'+esc(f.label)+'</th>').join('');
+    const amountColLabel = cfg.computed ? cfg.amountLabel : cfg.amountLabel;
+
+    panel.innerHTML = `
+      <div class="panel form-wrap accent" style="--accent:${cfg.color}">
+        <div class="panel-head"><h2>New ${esc(cfg.label)} Entry</h2><span class="hint">Manual fields only</span></div>
+        <div class="panel-body">
+          <form id="ef-form-${cfg.key}">
+            <div class="form-grid">
+              <div class="field"><label>Date</label><input type="date" id="ef-${cfg.key}-date" required></div>
+              ${fieldInputs}
+              ${amountField}
+              ${notesField}
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary" style="--accent:${cfg.color}">Save Entry</button>
+              <span class="form-msg" id="ef-msg-${cfg.key}"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>${esc(cfg.label)} — All Entries</h2><span class="hint" id="ef-count-${cfg.key}">0 entries</span></div>
+        <div class="panel-body table-scroll">
+          <table>
+            <thead><tr><th>Date</th>${tableCols}<th class="num">${esc(amountColLabel)}</th><th>Notes</th><th></th></tr></thead>
+            <tbody id="ef-rows-${cfg.key}"></tbody>
+            <tfoot><tr><td colspan="${1+cfg.fields.length}">TOTAL</td><td class="num" id="ef-tot-${cfg.key}">0</td><td colspan="2"></td></tr></tfoot>
+          </table>
+          <div class="empty-state" id="ef-empty-${cfg.key}" style="display:none;">No entries yet.</div>
+        </div>
+      </div>
+    `;
+    panelsEl.appendChild(panel);
+
+    document.getElementById('ef-form-' + cfg.key).addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const msgEl = document.getElementById('ef-msg-' + cfg.key);
+      const entry = { date: document.getElementById('ef-'+cfg.key+'-date').value };
+      cfg.fields.forEach(f => {
+        const v = document.getElementById('ef-'+cfg.key+'-'+f.id).value;
+        entry[f.id] = f.type === 'number' ? (parseFloat(v)||0) : v;
+      });
+      if(cfg.computed){
+        entry.amount = (entry.loanAmount||0) - (entry.returnAmount||0);
+      } else {
+        entry.amount = parseFloat(document.getElementById('ef-'+cfg.key+'-amount').value) || 0;
+      }
+      entry.notes = document.getElementById('ef-'+cfg.key+'-notes').value;
+
+      const entries = await loadCategory(cfg);
+      entries.push(entry);
+      const ok = await saveCategory(cfg, entries);
+      msgEl.className = 'form-msg ' + (ok?'ok':'err');
+      msgEl.textContent = ok ? 'Saved — '+entries.length+' total entries.' : 'Could not save. Reload the page and try again.';
+      if(ok){ document.getElementById('ef-form-'+cfg.key).reset(); }
+      setTimeout(()=>{ msgEl.textContent=''; }, 4000);
+      await refreshEverything();
+    });
+  });
+}
+
+async function renderCategoryTable(cfg){
+  const entries = await loadCategory(cfg);
+  const rowsEl = document.getElementById('ef-rows-'+cfg.key);
+  const emptyEl = document.getElementById('ef-empty-'+cfg.key);
+  document.getElementById('ef-count-'+cfg.key).textContent = entries.length + ' entries';
+  let tot = 0; entries.forEach(e => tot += Number(e.amount||0));
+  document.getElementById('ef-tot-'+cfg.key).textContent = fmt2(tot);
+  if(entries.length===0){ rowsEl.innerHTML=''; emptyEl.style.display='block'; return entries; }
+  emptyEl.style.display='none';
+  rowsEl.innerHTML = entries.slice().reverse().map((e,idx) => {
+    const realIdx = entries.length-1-idx;
+    const cells = cfg.fields.map(f => '<td>'+ (f.type==='number' ? fmt2(e[f.id]) : esc(e[f.id])) +'</td>').join('');
+    return '<tr><td>'+esc(e.date)+'</td>'+cells+'<td class="num">'+fmt2(e.amount)+'</td><td>'+esc(e.notes)+'</td>'+
+      '<td><button class="del-btn" data-idx="'+realIdx+'">Delete</button></td></tr>';
+  }).join('');
+  rowsEl.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const all = await loadCategory(cfg);
+      all.splice(parseInt(btn.dataset.idx),1);
+      await saveCategory(cfg, all);
+      await refreshEverything();
+    });
+  });
+  return entries;
+}
+
+async function renderExpenseAll(){
+  const allByCategory = {};
+  for(const cfg of CATEGORY_CONFIGS){
+    allByCategory[cfg.key] = await renderCategoryTable(cfg);
+  }
+  return allByCategory;
+}
+
+/* ============ OVERALL EXPENSE SUMMARY ============ */
+function buildOverallSummaryDOM(){
+  const subtabsEl = document.getElementById('expense-subtabs');
+  const panelsEl = document.getElementById('expense-panels');
+  const st = document.createElement('div');
+  st.className = 'subtab';
+  st.dataset.sub = 'overall';
+  st.innerHTML = '<span class="dot" style="background:#151F28"></span>Overall Summary';
+  st.addEventListener('click', () => {
+    document.querySelectorAll('#expense-subtabs .subtab').forEach(x=>{ x.classList.remove('active'); x.style.background=''; });
+    document.querySelectorAll('#expense-panels .subpanel').forEach(x=>x.classList.remove('active'));
+    st.classList.add('active'); st.style.background = '#151F28';
+    document.getElementById('exp-panel-overall').classList.add('active');
+  });
+  subtabsEl.appendChild(st);
+
+  const panel = document.createElement('div');
+  panel.className = 'subpanel';
+  panel.id = 'exp-panel-overall';
+  panel.innerHTML = `
+    <div class="stat-row" id="exp-overall-stats"></div>
+    <div class="grid-2">
+      <div class="panel accent" style="--accent:#151F28"><div class="panel-head"><h2>Daily total expense</h2></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-exp-overall-daily"></canvas></div></div></div>
+      <div class="panel accent" style="--accent:#151F28"><div class="panel-head"><h2>Share by category</h2></div>
+        <div class="panel-body"><div class="chart-box"><canvas id="chart-exp-overall-mix"></canvas></div></div></div>
+    </div>
+    <div class="panel"><div class="panel-head"><h2>Category totals</h2></div>
+      <div class="panel-body"><div class="chart-box"><canvas id="chart-exp-overall-cats"></canvas></div></div></div>
+    <div class="panel"><div class="panel-head"><h2>Date-wise breakdown</h2><span class="hint">Matches your original Summary sheet layout</span></div>
+      <div class="panel-body matrix-scroll table-scroll">
+        <table id="exp-overall-matrix"></table>
+      </div>
+    </div>
+  `;
+  panelsEl.appendChild(panel);
+}
+
+async function renderOverallSummary(allByCategory){
+  let grandTotal = 0, grandCount = 0;
+  const catTotals = [];
+  const dateMap = {}; // date -> {catKey: amount}
+
+  CATEGORY_CONFIGS.forEach(cfg => {
+    const entries = allByCategory[cfg.key] || [];
+    let catTot = 0;
+    entries.forEach(e => {
+      const amt = Number(e.amount||0);
+      catTot += amt; grandTotal += amt; grandCount += 1;
+      if(!dateMap[e.date]) dateMap[e.date] = {};
+      dateMap[e.date][cfg.key] = (dateMap[e.date][cfg.key]||0) + amt;
+    });
+    catTotals.push({key:cfg.key, label:cfg.label, color:cfg.color, total:catTot});
+  });
+
+  const dates = Object.keys(dateMap).sort();
+  const topCat = catTotals.slice().sort((a,b)=>b.total-a.total)[0];
+  const meanDaily = dates.length ? grandTotal/dates.length : 0;
+
+  document.getElementById('exp-overall-stats').innerHTML = `
+    <div class="stat c-blue"><div class="label">Total Expense (Rs)</div><div class="value">${fmt(grandTotal)}</div><div class="sub">${grandCount} entries · ${CATEGORY_CONFIGS.length} categories</div></div>
+    <div class="stat"><div class="label">Mean Daily Expense (Rs)</div><div class="value">${fmt(meanDaily)}</div><div class="sub">across ${dates.length} day(s) logged</div></div>
+    <div class="stat c-gold"><div class="label">Top Category</div><div class="value" style="font-size:16px;">${topCat?esc(topCat.label):'—'}</div><div class="sub">${topCat?fmt(topCat.total)+' Rs':''}</div></div>
+  `;
+
+  const dailyRows = dates.map(d => {
+    const rowTotal = Object.values(dateMap[d]).reduce((s,v)=>s+v,0);
+    return {key:d, amount:rowTotal};
+  });
+  killChart('exp-overall-daily');
+  charts['exp-overall-daily'] = simpleBar(document.getElementById('chart-exp-overall-daily'), dailyRows.map(r=>r.key), dailyRows.map(r=>r.amount), PALETTE.blue);
+
+  killChart('exp-overall-mix');
+  charts['exp-overall-mix'] = mixDoughnut(document.getElementById('chart-exp-overall-mix'),
+    catTotals.map(c=>c.label), catTotals.map(c=>c.total), catTotals.map(c=>c.color));
+
+  killChart('exp-overall-cats');
+  charts['exp-overall-cats'] = new Chart(document.getElementById('chart-exp-overall-cats'), {
+    type:'bar',
+    data:{ labels: catTotals.map(c=>c.label), datasets:[{ data: catTotals.map(c=>c.total),
+      backgroundColor: catTotals.map(c=>c.color), borderRadius:6, borderSkipped:false }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{ grid:{color:PALETTE.line, drawTicks:false}, border:{display:false}, ticks:{callback:v=>fmt(v)} }, y:{ grid:{display:false}, border:{display:false} } } }
+  });
+
+  const matrixEl = document.getElementById('exp-overall-matrix');
+  let thead = '<thead><tr><th>Date</th>' + CATEGORY_CONFIGS.map(c=>'<th class="num">'+esc(c.label)+'</th>').join('') + '<th class="num">Total</th></tr></thead>';
+  let tbody = '<tbody>' + dates.map(d => {
+    let rowTot = 0;
+    const cells = CATEGORY_CONFIGS.map(c => { const v = dateMap[d][c.key]||0; rowTot+=v; return '<td class="num">'+(v?fmt2(v):'—')+'</td>'; }).join('');
+    return '<tr><td>'+d+'</td>'+cells+'<td class="num" style="font-weight:700;">'+fmt2(rowTot)+'</td></tr>';
+  }).join('') + '</tbody>';
+  let tfoot = '<tfoot><tr><td>TOTAL</td>' + catTotals.map(c=>'<td class="num">'+fmt2(c.total)+'</td>').join('') + '<td class="num">'+fmt2(grandTotal)+'</td></tr></tfoot>';
+  matrixEl.innerHTML = thead + tbody + tfoot;
+}
+
+/* ============ OVERVIEW ============ */
+function renderOverview(salesEntries, allByCategory, purchaseEntries){
+  purchaseEntries = purchaseEntries || [];
+  const totalSale = salesEntries.reduce((s,e)=>s+Number(e.amount||0),0);
+  const totalCost = salesEntries.reduce((s,e)=>s+Number(e.cost||0),0);
+  const totalProfit = salesEntries.reduce((s,e)=>s+Number(e.profit||0),0);
+
+  let expenseEntries = [];
+  CATEGORY_CONFIGS.forEach(cfg => { expenseEntries = expenseEntries.concat((allByCategory[cfg.key]||[]).map(e=>({date:e.date, amount:e.amount, category:cfg.label}))); });
+  const totalExpense = expenseEntries.reduce((s,e)=>s+Number(e.amount||0),0);
+  const totalPurchase = purchaseEntries.reduce((s,e)=>s+Number(e.netPurchaseFinal||0),0);
+  const salesDays = aggregate(salesEntries, d=>d, 'amount').length;
+  const meanDaily = salesDays ? totalSale/salesDays : 0;
+
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat c-red"><div class="label">Total Sale (Rs)</div><div class="value">${fmt(totalSale)}</div><div class="sub">${salesEntries.length} entries</div></div>
+    <div class="stat c-blue"><div class="label">Total Expense (Rs)</div><div class="value">${fmt(totalExpense)}</div><div class="sub">${expenseEntries.length} entries</div></div>
+    <div class="stat c-green"><div class="label">Total Profit (Rs)</div><div class="value">${fmt(totalProfit)}</div><div class="sub">${totalSale? (totalProfit/totalSale*100).toFixed(2):'0'}% margin</div></div>
+    <div class="stat c-gold"><div class="label">Mean Daily Sale (Rs)</div><div class="value">${fmt(meanDaily)}</div><div class="sub">across ${salesDays} day(s) logged</div></div>
+    <div class="stat"><div class="label">Net (Sale − Expense)</div><div class="value">${fmt(totalSale-totalExpense)}</div></div>
+    <div class="stat" style="border-top-color:#AD1F2C;"><div class="label">Total Purchase (Rs)</div><div class="value">${fmt(totalPurchase)}</div><div class="sub">${purchaseEntries.length} entries</div></div>
+  `;
+  document.getElementById('status-table').innerHTML = `
+    <tr><td>Sale Report</td><td><span class="badge live">Live</span></td><td>${salesEntries.length}</td></tr>
+    <tr><td>Expense &amp; Cash Flow</td><td><span class="badge live">Live</span></td><td>${expenseEntries.length}</td></tr>
+    <tr><td>Purchasing</td><td><span class="badge live">Live</span></td><td>${purchaseEntries.length}</td></tr>
+    <tr><td>Salesman Cash Detail</td><td><span class="badge pending">Pending</span></td><td>—</td></tr>
+  `;
+
+  const daily = aggregate(salesEntries, d=>d, 'amount');
+  killChart('ov-daily');
+  charts['ov-daily'] = barLineChart(document.getElementById('chart-ov-daily'), daily.map(r=>r.key), daily.map(r=>r.amount), daily.map(r=>r.profit), 'Sale (Rs)', PALETTE.red);
+
+  const mixMap = {};
+  salesEntries.forEach(e => { if(Number(e.amount)>0){ mixMap[e.product] = (mixMap[e.product]||0) + Number(e.amount); } });
+  killChart('ov-mix');
+  charts['ov-mix'] = mixDoughnut(document.getElementById('chart-ov-mix'), Object.keys(mixMap), Object.values(mixMap));
+
+  const expDaily = aggregate(expenseEntries, d=>d, 'amount');
+  killChart('ov-expdaily');
+  charts['ov-expdaily'] = simpleBar(document.getElementById('chart-ov-expdaily'), expDaily.map(r=>r.key), expDaily.map(r=>r.amount), PALETTE.blue);
+
+  const expMixMap = {}; const expMixColor = {};
+  CATEGORY_CONFIGS.forEach(cfg => {
+    const t = (allByCategory[cfg.key]||[]).reduce((s,e)=>s+Number(e.amount||0),0);
+    if(t){ expMixMap[cfg.label] = t; expMixColor[cfg.label] = cfg.color; }
+  });
+  killChart('ov-expmix');
+  charts['ov-expmix'] = mixDoughnut(document.getElementById('chart-ov-expmix'), Object.keys(expMixMap), Object.values(expMixMap), Object.keys(expMixMap).map(k=>expMixColor[k]));
+
+  const weekly = aggregate(salesEntries, d=>mondayOf(d), 'amount');
+  killChart('ov-weekly');
+  charts['ov-weekly'] = simpleBar(document.getElementById('chart-ov-weekly'), weekly.map(r=>r.key), weekly.map(r=>r.amount), PALETTE.gold);
+  const monthly = aggregate(salesEntries, d=>monthKey(d), 'amount');
+  killChart('ov-monthly');
+  charts['ov-monthly'] = simpleBar(document.getElementById('chart-ov-monthly'), monthly.map(r=>r.key), monthly.map(r=>r.amount), PALETTE.red);
+  const yearly = aggregate(salesEntries, d=>yearKey(d), 'amount');
+  killChart('ov-yearly');
+  charts['ov-yearly'] = simpleBar(document.getElementById('chart-ov-yearly'), yearly.map(r=>r.key), yearly.map(r=>r.amount), PALETTE.green);
+}
+
+/* ============ ORCHESTRATION ============ */
+async function refreshEverything(){
+  const salesEntries = await renderSalesAll();
+  await sleep(80);
+  const allByCategory = await renderExpenseAll();
+  await renderOverallSummary(allByCategory);
+  await sleep(80);
+  const { purchaseEntries } = await renderPurchasingAll();
+  renderOverview(salesEntries, allByCategory, purchaseEntries);
+}
+async function checkStorage(){
+  const dot = document.getElementById('storage-dot');
+  const label = document.getElementById('storage-label');
+  try{
+    const res = await fetch(GAS_URLS['sales-entries'], { method:'GET' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    await res.json();
+    dot.classList.remove('bad');
+    label.textContent = 'Connected to Google Sheets — entries save automatically';
+  }catch(e){
+    dot.classList.add('bad');
+    label.textContent = 'Google Sheets unreachable — reload the page';
+    console.error('Google Sheets self-test failed:', e);
+  }
+}
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('tab-' + item.dataset.tab).classList.add('active');
+  });
+});
+document.querySelectorAll('#sales-subtabs .subtab').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('#sales-subtabs .subtab').forEach(i => { i.classList.remove('active'); i.style.background=''; });
+    document.querySelectorAll('#tab-sales .subpanel').forEach(s => s.classList.remove('active'));
+    item.classList.add('active'); item.style.background = '#AD1F2C';
+    document.getElementById('sub-' + item.dataset.sub).classList.add('active');
+  });
+});
+
+buildExpenseDOM();
+buildOverallSummaryDOM();
+buildPurchasingDOM();
+checkStorage();
+refreshEverything();
+</script>
+
+</body>
+</html>
