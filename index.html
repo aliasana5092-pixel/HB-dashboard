@@ -928,9 +928,19 @@ async function renderPurchasingAll(){
 const CASHDETAIL_KEY = 'cashdetail-entries';
 async function loadCashDetail(){
   const existing = await storageGet(CASHDETAIL_KEY);
-  if(existing) return existing;
-  await storageSet(CASHDETAIL_KEY, CASHDETAIL_SEED);
-  return CASHDETAIL_SEED.slice();
+  let entries = existing || CASHDETAIL_SEED.slice();
+  entries = normalizeCashDetailEntries(entries);
+  if(!existing){ await storageSet(CASHDETAIL_KEY, entries); }
+  return entries;
+}
+function normalizeCashDetailEntries(entries){
+  return entries.map(e => {
+    const c = computeCashDetail(e);
+    return Object.assign({}, e, {
+      netSale: c.netSale, remainingPets: c.remainingPets,
+      totalFinalAmount: c.totalFinalAmount, totalB: c.totalB, recovery: c.recovery
+    });
+  });
 }
 async function saveCashDetail(entries){ return await storageSet(CASHDETAIL_KEY, entries); }
 
