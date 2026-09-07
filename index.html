@@ -137,14 +137,18 @@
     #print-area{ display:block; position:absolute; top:0; left:0; width:100%; padding:0; }
     @page{ size:A4; margin:20mm; }
   }
-  #print-area .p-header{ text-align:center; margin-bottom:14px; border-bottom:2px solid #151F28; padding-bottom:10px; }
-  #print-area .p-header h1{ font-family:var(--display); font-size:20px; margin:0 0 4px 0; }
-  #print-area .p-header .p-sub{ font-size:11.5px; color:#5B6B76; }
+  #print-area{ font-family:var(--font); color:#222; }
+  #print-area .p-header{ text-align:center; margin-bottom:16px; border-bottom:3px double #151F28; padding-bottom:12px; }
+  #print-area .p-header .p-brand{ font-family:var(--display); font-weight:700; font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:#AD1F2C; margin-bottom:4px; }
+  #print-area .p-header h1{ font-family:var(--display); font-weight:700; font-size:22px; margin:0 0 6px 0; text-align:center; }
+  #print-area .p-header .p-sub{ font-size:11px; color:#5B6B76; }
   #print-area table{ width:100%; border-collapse:collapse; font-size:10px; }
-  #print-area th{ background:#EEEFEA; padding:5px 6px; text-align:left; border:1px solid #ccc; font-size:9.5px; }
-  #print-area td{ padding:4px 6px; border:1px solid #ddd; }
-  #print-area tfoot td{ font-weight:700; background:#F5F5F0; }
-  #print-area .p-footer{ margin-top:10px; font-size:9.5px; color:#777; text-align:right; }
+  #print-area th{ background:#151F28; color:#fff; padding:7px 6px; text-align:center; font-weight:700; border:1px solid #151F28; font-size:9.5px; text-transform:uppercase; letter-spacing:0.3px; }
+  #print-area td{ padding:5px 6px; border:1px solid #ddd; text-align:center; }
+  #print-area tbody tr:nth-child(odd){ background:#F2F3EE; }
+  #print-area tbody tr:nth-child(even){ background:#FFFFFF; }
+  #print-area tfoot td{ font-weight:700; background:#E4E6DE; border-top:2px solid #151F28; text-align:center; }
+  #print-area .p-footer{ margin-top:12px; font-size:9px; color:#999; text-align:right; border-top:1px solid #ddd; padding-top:6px; }
 </style>
 </head>
 <body>
@@ -227,7 +231,7 @@
 
       <div class="subpanel active" id="sub-entryform">
         <div class="panel form-wrap accent" style="--accent:#AD1F2C">
-          <div class="panel-head"><h2>New Sale Entry</h2><span class="hint">Manual fields only</span></div>
+          <div class="panel-head"><h2>New Sale Entry</h2><span class="hint">Margin, cost &amp; profit calculate live</span></div>
           <div class="panel-body">
             <form id="sales-form">
               <div class="form-grid">
@@ -237,17 +241,18 @@
                 <div class="field"><label>Invoice / Doc #</label><input type="text" id="s-invoice"></div>
                 <div class="field"><label>Customer Name</label><input type="text" id="s-customer" required></div>
                 <div class="field"><label>Product</label>
-                  <select id="s-product" required>
-                    <option value="">Select</option>
-                    <option>Coke</option><option>Sprite</option><option>Fanta</option>
-                    <option>Dasani water</option><option>Predator Peach</option>
-                    <option>Mixed</option><option>Tax/Pass-through</option>
-                  </select>
+                  <select id="s-product" required><option value="">Select</option></select>
                 </div>
-                <div class="field"><label>Size</label><input type="text" id="s-size" placeholder="e.g. 1500ml Lemon"></div>
+                <div class="field"><label>Size</label>
+                  <select id="s-size" required><option value="">Select</option></select>
+                </div>
+                <div class="field" id="s-size-other-wrap" style="display:none;"><label>Specify Size</label><input type="text" id="s-size-other" placeholder="Type the size"></div>
                 <div class="field"><label>Quantity</label><input type="number" step="any" id="s-qty" required></div>
                 <div class="field"><label>Sale Amount (Rs)</label><input type="number" step="any" id="s-amount" required></div>
                 <div class="field"><label>Notes</label><input type="text" id="s-notes"></div>
+              </div>
+              <div class="panel" style="margin:18px 0 0 0; background:#F7F7F4;">
+                <div class="panel-body" style="padding:14px 18px;" id="s-live-calc"><span class="hint">Fill Product, Size and Sale Amount to preview</span></div>
               </div>
               <div class="form-actions">
                 <button type="submit" class="primary" style="--accent:#AD1F2C">Save Entry</button>
@@ -260,7 +265,16 @@
 
       <div class="subpanel" id="sub-entries">
         <div class="panel">
-          <div class="panel-head"><h2>All Sales Entries</h2><span class="hint" id="sales-count">0 entries</span></div>
+          <div class="panel-head">
+            <h2>All Sales Entries</h2>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+              <span class="hint" id="sales-count">0 entries</span>
+              <select id="sales-print-month" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;"><option value="">All months</option></select>
+              <input type="date" id="sales-print-from" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="From date">
+              <input type="date" id="sales-print-to" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="To date">
+              <button id="sales-print-btn" class="primary" style="--accent:#AD1F2C; padding:7px 14px; font-size:12px;">⬇ Download PDF</button>
+            </div>
+          </div>
           <div class="panel-body table-scroll">
             <table>
               <thead><tr>
@@ -422,10 +436,7 @@ async function storageGet(key, retries){
       if(!res.ok) throw new Error('HTTP '+res.status);
       const arr = await res.json();
       if(!Array.isArray(arr)) return null;
-      if(isWrappedObjectKey(key)) return arr.length ? arr[0] : null;
-      // IMPORTANT: a legitimately-cleared/emptied sheet returns [] here — return it as-is.
-      // Do NOT convert [] to null, or every loadXxx() below will mistake "cleared" for
-      // "never seeded" and silently re-write the seed data back in (the delete/clear-all bug).
+      if(isWrappedObjectKey(key)) return arr.length ? arr[0] : {};
       return arr;
     }catch(e){
       if(i===retries){ console.error('storageGet failed after retries:', key, e); return null; }
@@ -1564,6 +1575,7 @@ async function renderSalesAll(){
   renderSalesWeekly(entries);
   renderSalesMonthly(entries);
   renderSalesYearly(entries);
+  setupSalesPrint(entries);
   return entries;
 }
 function renderSalesTable(entries){
@@ -1636,11 +1648,47 @@ function renderSalesYearly(entries){
   killChart('yearly');
   charts['yearly'] = barLineChart(document.getElementById('chart-yearly'), rows.map(r=>r.key), rows.map(r=>r.amount), rows.map(r=>r.profit), 'Sale (Rs)', PALETTE.green);
 }
+
+/* Sale entry form init: product/size dropdowns, live calc, Other-size handling */
+function initSalesForm(){
+  const SALES_PRODUCTS = Object.keys(PURCHASE_PRODUCT_SIZES).concat(['Mixed','Tax/Pass-through']);
+  document.getElementById('s-product').innerHTML = '<option value="">Select</option>' +
+    SALES_PRODUCTS.map(p => '<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
+  document.getElementById('s-size').innerHTML = '<option value="">Select</option>' +
+    SAMPLE_SIZES.map(s => '<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
+
+  document.getElementById('s-size').addEventListener('change', (e) => {
+    document.getElementById('s-size-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
+    updateSalesLiveCalc();
+  });
+  ['s-product','s-qty','s-amount'].forEach(id => document.getElementById(id).addEventListener('input', updateSalesLiveCalc));
+  document.getElementById('s-product').addEventListener('change', updateSalesLiveCalc);
+
+  function updateSalesLiveCalc(){
+    const product = document.getElementById('s-product').value;
+    const size = document.getElementById('s-size').value;
+    const amount = parseFloat(document.getElementById('s-amount').value) || 0;
+    const marginPct = lookupMargin(product, size);
+    const cost = amount * (1 - marginPct);
+    const profit = amount - cost;
+    document.getElementById('s-live-calc').innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; font-size:12.5px;">
+        <div><span class="hint">Margin %</span><br><b>${(marginPct*100).toFixed(2)}%</b></div>
+        <div><span class="hint">Cost (Rs)</span><br><b>${fmt2(cost)}</b></div>
+        <div style="grid-column:span 2;"><span class="hint">PROFIT (Rs)</span><br><b style="font-size:16px; color:${profit>=0?'#2E6B4F':'#AD1F2C'};">${fmt2(profit)}</b></div>
+      </div>`;
+  }
+  window._updateSalesLiveCalc = updateSalesLiveCalc;
+  updateSalesLiveCalc();
+}
+initSalesForm();
+
 document.getElementById('sales-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const msgEl = document.getElementById('sales-msg');
   const product = document.getElementById('s-product').value;
-  const size = document.getElementById('s-size').value;
+  let size = document.getElementById('s-size').value;
+  if(size === 'Other'){ size = document.getElementById('s-size-other').value || 'Other'; }
   const amount = parseFloat(document.getElementById('s-amount').value) || 0;
   const marginPct = lookupMargin(product, size);
   const cost = amount * (1 - marginPct);
@@ -1657,10 +1705,63 @@ document.getElementById('sales-form').addEventListener('submit', async (ev) => {
   const ok = await saveSales(entries);
   msgEl.className = 'form-msg ' + (ok ? 'ok' : 'err');
   msgEl.textContent = ok ? 'Saved — ' + entries.length + ' total entries.' : 'Could not save. Reload the page and try again.';
-  if(ok){ document.getElementById('sales-form').reset(); }
+  if(ok){
+    document.getElementById('sales-form').reset();
+    document.getElementById('s-size-other-wrap').style.display = 'none';
+    if(window._updateSalesLiveCalc) window._updateSalesLiveCalc();
+  }
   setTimeout(() => { msgEl.textContent=''; }, 4000);
   await refreshEverything();
 });
+
+function setupSalesPrint(entries){
+  const monthSel = document.getElementById('sales-print-month');
+  const months = Array.from(new Set(entries.map(e => monthKey(e.date)))).sort();
+  const currentVal = monthSel.value;
+  monthSel.innerHTML = '<option value="">All months</option>' + months.map(m => '<option value="'+m+'">'+m+'</option>').join('');
+  if(months.includes(currentVal)) monthSel.value = currentVal;
+
+  const btn = document.getElementById('sales-print-btn');
+  if(btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', async () => {
+    const all = await loadSales();
+    const month = document.getElementById('sales-print-month').value;
+    const from = document.getElementById('sales-print-from').value;
+    const to = document.getElementById('sales-print-to').value;
+    let filtered = all;
+    if(month) filtered = filtered.filter(e => monthKey(e.date) === month);
+    if(from) filtered = filtered.filter(e => e.date >= from);
+    if(to) filtered = filtered.filter(e => e.date <= to);
+    filtered = filtered.slice().sort((a,b)=> a.date < b.date ? -1 : 1);
+
+    let periodLabel = 'All dates';
+    if(month) periodLabel = month;
+    else if(from || to) periodLabel = (from||'…') + ' to ' + (to||'…');
+
+    let totAmount=0, totCost=0, totProfit=0;
+    const rows = filtered.map(e => {
+      totAmount += Number(e.amount||0); totCost += Number(e.cost||0); totProfit += Number(e.profit||0);
+      return '<tr><td>'+esc(e.date)+'</td><td>'+esc(e.customer)+'</td><td>'+esc(e.product)+'</td><td>'+esc(e.size)+'</td>'+
+        '<td style="text-align:right;">'+fmt2(e.qty)+'</td><td style="text-align:right;">'+fmt2(e.amount)+'</td>'+
+        '<td style="text-align:right;">'+fmt2(e.cost)+'</td><td style="text-align:right; font-weight:700;">'+fmt2(e.profit)+'</td></tr>';
+    }).join('');
+
+    document.getElementById('print-area').innerHTML = `
+      <div class="p-header">
+        <h1>Hafiz Beverages SDK — Sale Report</h1>
+        <div class="p-sub">RYK · Sadiqabad Operations &nbsp;|&nbsp; Period: ${esc(periodLabel)} &nbsp;|&nbsp; ${filtered.length} entries</div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Customer</th><th>Product</th><th>Size</th><th>Qty</th><th>Sale (Rs)</th><th>Cost (Rs)</th><th>Profit (Rs)</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="8" style="text-align:center;">No entries in this period</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="5">TOTAL</td><td style="text-align:right;">${fmt2(totAmount)}</td><td style="text-align:right;">${fmt2(totCost)}</td><td style="text-align:right;">${fmt2(totProfit)}</td></tr></tfoot>
+      </table>
+      <div class="p-footer">Generated ${new Date().toLocaleString('en-PK')}</div>
+    `;
+    window.print();
+  });
+}
 
 /* ============ EXPENSE: PER-CATEGORY GENERIC MODULE ============ */
 /* Consolidated into ONE storage key (instead of 12) to cut down on storage calls */
