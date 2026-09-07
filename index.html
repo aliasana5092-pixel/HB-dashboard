@@ -421,8 +421,12 @@ async function storageGet(key, retries){
       const res = await fetch(url, { method:'GET' });
       if(!res.ok) throw new Error('HTTP '+res.status);
       const arr = await res.json();
-      if(!Array.isArray(arr) || arr.length===0) return null;
-      return isWrappedObjectKey(key) ? arr[0] : arr;
+      if(!Array.isArray(arr)) return null;
+      if(isWrappedObjectKey(key)) return arr.length ? arr[0] : null;
+      // IMPORTANT: a legitimately-cleared/emptied sheet returns [] here — return it as-is.
+      // Do NOT convert [] to null, or every loadXxx() below will mistake "cleared" for
+      // "never seeded" and silently re-write the seed data back in (the delete/clear-all bug).
+      return arr;
     }catch(e){
       if(i===retries){ console.error('storageGet failed after retries:', key, e); return null; }
       await sleep(600*(i+1));
