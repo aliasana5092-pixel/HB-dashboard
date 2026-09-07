@@ -711,6 +711,7 @@ function buildPurchasingDOM(){
             <input type="date" id="stock-print-from" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="From date">
             <input type="date" id="stock-print-to" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="To date">
             <button id="stock-print-btn" class="primary" style="--accent:#2E7FC1; padding:7px 14px; font-size:12px;">⬇ Download PDF</button>
+            <button id="stock-clearall-btn" style="padding:7px 14px; font-size:12px; background:#7E1620; color:#fff; border:none; border-radius:3px; cursor:pointer;">🗑 Clear All Entries</button>
           </div>
         </div>
         <div class="panel-body table-scroll">
@@ -993,9 +994,11 @@ async function renderStockAll(){
     }
     rowsEl.querySelectorAll('.del-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = '…';
         const all = await loadStock();
         all.splice(parseInt(btn.dataset.idx),1);
-        await saveStock(all);
+        const ok = await saveStock(all);
+        if(!ok){ alert('Delete save nahi ho saka — connection check karein aur dobara try karein.'); btn.disabled=false; btn.textContent='Delete'; return; }
         await refreshEverything();
       });
     });
@@ -1075,6 +1078,21 @@ function setupStockPrint(entries){
   const currentVal = monthSel.value;
   monthSel.innerHTML = '<option value="">All months</option>' + months.map(m => '<option value="'+m+'">'+m+'</option>').join('');
   if(months.includes(currentVal)) monthSel.value = currentVal;
+
+  const clearBtn = document.getElementById('stock-clearall-btn');
+  if(!clearBtn.dataset.wired){
+    clearBtn.dataset.wired = '1';
+    clearBtn.addEventListener('click', async () => {
+      if(!confirm('Sab Stock Monitoring entries hamesha ke liye delete ho jayengi. Confirm karein?')) return;
+      clearBtn.disabled = true;
+      clearBtn.textContent = 'Clearing…';
+      const ok = await saveStock([]);
+      clearBtn.disabled = false;
+      clearBtn.textContent = '🗑 Clear All Entries';
+      if(!ok){ alert('Delete nahi ho saka — connection check karein aur dobara try karein.'); return; }
+      await refreshEverything();
+    });
+  }
 
   const btn = document.getElementById('stock-print-btn');
   if(btn.dataset.wired) return;
@@ -1720,7 +1738,16 @@ function buildExpenseDOM(){
         </div>
       </div>
       <div class="panel">
-        <div class="panel-head"><h2>${esc(cfg.label)} — All Entries</h2><span class="hint" id="ef-count-${cfg.key}">0 entries</span></div>
+        <div class="panel-head">
+          <h2>${esc(cfg.label)} — All Entries</h2>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="hint" id="ef-count-${cfg.key}">0 entries</span>
+            <select id="ef-print-month-${cfg.key}" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;"><option value="">All months</option></select>
+            <input type="date" id="ef-print-from-${cfg.key}" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="From date">
+            <input type="date" id="ef-print-to-${cfg.key}" style="padding:6px 9px; border:1px solid var(--line); font-size:12px; border-radius:3px;" title="To date">
+            <button id="ef-print-btn-${cfg.key}" class="primary" style="--accent:${cfg.color}; padding:7px 14px; font-size:12px;">⬇ Download PDF</button>
+          </div>
+        </div>
         <div class="panel-body table-scroll">
           <table>
             <thead><tr><th>Date</th>${tableCols}<th class="num">${esc(amountColLabel)}</th><th>Notes</th><th></th></tr></thead>
@@ -1767,6 +1794,7 @@ async function renderCategoryTable(cfg){
   document.getElementById('ef-count-'+cfg.key).textContent = entries.length + ' entries';
   let tot = 0; entries.forEach(e => tot += Number(e.amount||0));
   document.getElementById('ef-tot-'+cfg.key).textContent = fmt2(tot);
+  setupCategoryPrint(cfg, entries);
   if(entries.length===0){ rowsEl.innerHTML=''; emptyEl.style.display='block'; return entries; }
   emptyEl.style.display='none';
   rowsEl.innerHTML = entries.slice().reverse().map((e,idx) => {
@@ -1784,6 +1812,56 @@ async function renderCategoryTable(cfg){
     });
   });
   return entries;
+}
+
+function setupCategoryPrint(cfg, entries){
+  const monthSel = document.getElementById('ef-print-month-'+cfg.key);
+  if(!monthSel) return;
+  const months = Array.from(new Set(entries.map(e => monthKey(e.date)))).sort();
+  const currentVal = monthSel.value;
+  monthSel.innerHTML = '<option value="">All months</option>' + months.map(m => '<option value="'+m+'">'+m+'</option>').join('');
+  if(months.includes(currentVal)) monthSel.value = currentVal;
+
+  const btn = document.getElementById('ef-print-btn-'+cfg.key);
+  if(btn.dataset.wired) return;
+  btn.dataset.wired = '1';
+  btn.addEventListener('click', async () => {
+    const all = await loadCategory(cfg);
+    const month = document.getElementById('ef-print-month-'+cfg.key).value;
+    const from = document.getElementById('ef-print-from-'+cfg.key).value;
+    const to = document.getElementById('ef-print-to-'+cfg.key).value;
+    let filtered = all;
+    if(month) filtered = filtered.filter(e => monthKey(e.date) === month);
+    if(from) filtered = filtered.filter(e => e.date >= from);
+    if(to) filtered = filtered.filter(e => e.date <= to);
+    filtered = filtered.slice().sort((a,b)=> a.date < b.date ? -1 : 1);
+
+    let periodLabel = 'All dates';
+    if(month) periodLabel = month;
+    else if(from || to) periodLabel = (from||'…') + ' to ' + (to||'…');
+
+    let total = 0;
+    const fieldHeaders = cfg.fields.map(f => '<th>'+esc(f.label)+'</th>').join('');
+    const rows = filtered.map(e => {
+      total += Number(e.amount||0);
+      const cells = cfg.fields.map(f => '<td'+(f.type==='number'?' style="text-align:right;"':'')+'>'+(f.type==='number'?fmt2(e[f.id]):esc(e[f.id]))+'</td>').join('');
+      return '<tr><td>'+esc(e.date)+'</td>'+cells+'<td style="text-align:right; font-weight:700;">'+fmt2(e.amount)+'</td><td>'+esc(e.notes)+'</td></tr>';
+    }).join('');
+
+    document.getElementById('print-area').innerHTML = `
+      <div class="p-header">
+        <h1>Hafiz Beverages SDK — ${esc(cfg.label)} Report</h1>
+        <div class="p-sub">RYK · Sadiqabad Operations &nbsp;|&nbsp; Period: ${esc(periodLabel)} &nbsp;|&nbsp; ${filtered.length} entries</div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th>${fieldHeaders}<th>${esc(cfg.amountLabel)}</th><th>Notes</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="'+(3+cfg.fields.length)+'" style="text-align:center;">No entries in this period</td></tr>'}</tbody>
+        <tfoot><tr><td colspan="${1+cfg.fields.length}">TOTAL</td><td style="text-align:right;">${fmt2(total)}</td><td></td></tr></tfoot>
+      </table>
+      <div class="p-footer">Generated ${new Date().toLocaleString('en-PK')}</div>
+    `;
+    window.print();
+  });
 }
 
 async function renderExpenseAll(){
