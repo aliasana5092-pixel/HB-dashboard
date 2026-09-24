@@ -285,6 +285,7 @@
                 <div class="field"><label>Product</label>
                   <select id="s-product" required><option value="">Select</option></select>
                 </div>
+                <div class="field" id="s-product-other-wrap" style="display:none;"><label>Specify Product</label><input type="text" id="s-product-other" placeholder="Type the product"></div>
                 <div class="field"><label>Size</label>
                   <select id="s-size" required><option value="">Select</option></select>
                 </div>
@@ -668,7 +669,7 @@ function buildPurchasingDOM(){
   const subtabsEl = document.getElementById('purchasing-subtabs');
   const panelsEl = document.getElementById('purchasing-panels');
 
-  const productOptions = Object.keys(PURCHASE_PRODUCT_SIZES).map(p =>
+  const productOptions = Object.keys(PURCHASE_PRODUCT_SIZES).concat(['Other']).map(p =>
     '<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
   const sizeOptions = SAMPLE_SIZES.map(s => '<option value="'+esc(s)+'">'+esc(s)+'</option>').join('');
 
@@ -682,6 +683,7 @@ function buildPurchasingDOM(){
               <div class="field"><label>Date</label><input type="date" id="p-date" required></div>
               <div class="field"><label>Month</label><input type="text" id="p-month" placeholder="e.g. September"></div>
               <div class="field"><label>Product</label><select id="p-product" required><option value="">Select</option>${productOptions}</select></div>
+              <div class="field" id="p-product-other-wrap" style="display:none;"><label>Specify Product</label><input type="text" id="p-product-other" placeholder="Type the product"></div>
               <div class="field"><label>Sample Size</label><select id="p-size" required><option value="">Select</option>${sizeOptions}</select></div>
               <div class="field" id="p-size-other-wrap" style="display:none;"><label>Specify Size</label><input type="text" id="p-size-other" placeholder="Type the size"></div>
               <div class="field"><label>Total No of Invoices</label><input type="number" step="any" id="p-totinv"></div>
@@ -755,9 +757,11 @@ function buildPurchasingDOM(){
               <div class="field"><label>Date</label><input type="date" id="st-date" required></div>
               <div class="field"><label>Month</label><input type="text" id="st-month" placeholder="e.g. September"></div>
               <div class="field"><label>Product</label>
-                <select id="st-product" required><option value="">Select</option>${STOCK_PRODUCTS.map(p=>'<option>'+esc(p)+'</option>').join('')}</select></div>
+                <select id="st-product" required><option value="">Select</option>${STOCK_PRODUCTS.concat(['Other']).map(p=>'<option>'+esc(p)+'</option>').join('')}</select></div>
+              <div class="field" id="st-product-other-wrap" style="display:none;"><label>Specify Product</label><input type="text" id="st-product-other" placeholder="Type the product"></div>
               <div class="field"><label>Size</label>
                 <select id="st-size" required><option value="">Select</option>${STOCK_SIZES.map(s=>'<option>'+esc(s)+'</option>').join('')}</select></div>
+              <div class="field" id="st-size-other-wrap" style="display:none;"><label>Specify Size</label><input type="text" id="st-size-other" placeholder="Type the size"></div>
               <div class="field"><label>Previous Stock</label><input type="number" step="any" id="st-prev" value="0"></div>
               <div class="field"><label>New Stock (received)</label><input type="number" step="any" id="st-new" value="0"></div>
               <div class="field"><label>Total Sale Stock</label><input type="number" step="any" id="st-sale" value="0"></div>
@@ -851,6 +855,9 @@ function buildPurchasingDOM(){
   document.getElementById('p-size').addEventListener('change', (e) => {
     document.getElementById('p-size-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
   });
+  document.getElementById('p-product').addEventListener('change', (e) => {
+    document.getElementById('p-product-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
+  });
   ['p-qtypet','p-qty','p-rate','p-margin','p-palletrs','p-palletqty','p-mtqty','p-mtrs'].forEach(id => {
     document.getElementById(id).addEventListener('input', updatePurchaseLiveCalc);
   });
@@ -897,8 +904,10 @@ function buildPurchasingDOM(){
     const msgEl = document.getElementById('purchase-msg');
     let size = document.getElementById('p-size').value;
     if(size === 'Other'){ size = document.getElementById('p-size-other').value || 'Other'; }
+    let product = document.getElementById('p-product').value;
+    if(product === 'Other'){ product = document.getElementById('p-product-other').value || 'Other'; }
     const f = {
-      product: document.getElementById('p-product').value, size,
+      product, size,
       qtyPet: parseFloat(document.getElementById('p-qtypet').value)||0, qty: parseFloat(document.getElementById('p-qty').value)||0,
       rate: parseFloat(document.getElementById('p-rate').value)||0, marginPct: parseFloat(document.getElementById('p-margin').value)||0,
       palletRs: parseFloat(document.getElementById('p-palletrs').value)||0, palletQty: parseFloat(document.getElementById('p-palletqty').value)||0,
@@ -926,10 +935,18 @@ function buildPurchasingDOM(){
     if(ok){
       document.getElementById('purchase-form').reset();
       document.getElementById('p-size-other-wrap').style.display = 'none';
+      document.getElementById('p-product-other-wrap').style.display = 'none';
       updatePurchaseLiveCalc();
     }
     setTimeout(()=>{ msgEl.textContent=''; }, 4000);
     await refreshEverything();
+  });
+
+  document.getElementById('st-product').addEventListener('change', (e) => {
+    document.getElementById('st-product-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
+  });
+  document.getElementById('st-size').addEventListener('change', (e) => {
+    document.getElementById('st-size-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
   });
 
   document.getElementById('stock-form').addEventListener('submit', async (ev) => {
@@ -939,9 +956,13 @@ function buildPurchasingDOM(){
     const nw = parseFloat(document.getElementById('st-new').value)||0;
     const sale = parseFloat(document.getElementById('st-sale').value)||0;
     const claim = parseFloat(document.getElementById('st-claim').value)||0;
+    let stProduct = document.getElementById('st-product').value;
+    if(stProduct === 'Other'){ stProduct = document.getElementById('st-product-other').value || 'Other'; }
+    let stSize = document.getElementById('st-size').value;
+    if(stSize === 'Other'){ stSize = document.getElementById('st-size-other').value || 'Other'; }
     const entry = {
       date: document.getElementById('st-date').value, month: document.getElementById('st-month').value,
-      product: document.getElementById('st-product').value, size: document.getElementById('st-size').value,
+      product: stProduct, size: stSize,
       previousStock: prev, newStock: nw, totalSaleStock: sale, claimStock: claim,
       totalBalanceStock: prev + nw - sale - claim
     };
@@ -950,7 +971,12 @@ function buildPurchasingDOM(){
     const ok = await saveStock(entries);
     msgEl.className = 'form-msg ' + (ok?'ok':'err');
     msgEl.textContent = ok ? 'Saved — '+entries.length+' total entries.' : 'Could not save. Reload the page and try again.';
-    if(ok){ document.getElementById('stock-form').reset(); updateStockLiveCalc(); }
+    if(ok){
+      document.getElementById('stock-form').reset();
+      document.getElementById('st-product-other-wrap').style.display = 'none';
+      document.getElementById('st-size-other-wrap').style.display = 'none';
+      updateStockLiveCalc();
+    }
     setTimeout(()=>{ msgEl.textContent=''; }, 4000);
     await refreshEverything();
   });
@@ -2015,7 +2041,7 @@ function setupSalesSummaryPrintButtons(){
 
 /* Sale entry form init: product/size dropdowns, live calc, Other-size handling */
 function initSalesForm(){
-  const SALES_PRODUCTS = Object.keys(PURCHASE_PRODUCT_SIZES).concat(['Mixed','Tax/Pass-through']);
+  const SALES_PRODUCTS = Object.keys(PURCHASE_PRODUCT_SIZES).concat(['Mixed','Tax/Pass-through','Other']);
   document.getElementById('s-product').innerHTML = '<option value="">Select</option>' +
     SALES_PRODUCTS.map(p => '<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
   document.getElementById('s-size').innerHTML = '<option value="">Select</option>' +
@@ -2024,6 +2050,9 @@ function initSalesForm(){
   document.getElementById('s-size').addEventListener('change', (e) => {
     document.getElementById('s-size-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
     updateSalesLiveCalc();
+  });
+  document.getElementById('s-product').addEventListener('change', (e) => {
+    document.getElementById('s-product-other-wrap').style.display = (e.target.value === 'Other') ? 'block' : 'none';
   });
   ['s-product','s-qty','s-amount'].forEach(id => document.getElementById(id).addEventListener('input', updateSalesLiveCalc));
   document.getElementById('s-product').addEventListener('change', updateSalesLiveCalc);
@@ -2050,7 +2079,8 @@ initSalesForm();
 document.getElementById('sales-form').addEventListener('submit', async (ev) => {
   ev.preventDefault();
   const msgEl = document.getElementById('sales-msg');
-  const product = document.getElementById('s-product').value;
+  let product = document.getElementById('s-product').value;
+  if(product === 'Other'){ product = document.getElementById('s-product-other').value || 'Other'; }
   let size = document.getElementById('s-size').value;
   if(size === 'Other'){ size = document.getElementById('s-size-other').value || 'Other'; }
   const amount = parseFloat(document.getElementById('s-amount').value) || 0;
@@ -2072,6 +2102,7 @@ document.getElementById('sales-form').addEventListener('submit', async (ev) => {
   if(ok){
     document.getElementById('sales-form').reset();
     document.getElementById('s-size-other-wrap').style.display = 'none';
+    document.getElementById('s-product-other-wrap').style.display = 'none';
     if(window._updateSalesLiveCalc) window._updateSalesLiveCalc();
   }
   setTimeout(() => { msgEl.textContent=''; }, 4000);
